@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>PHT LAB | Accessible Research Dashboard</title>
+
+  <meta name="description"
+    content="Explore, filter, and visualize your data with our intuitive dashboard. Uncover insights, identify trends, and make informed decisions." />
+  <link rel="shortcut icon" href="media/favicon.png" type="image/x-icon" />
+  <link href="assets/vendor/google-fonts/fonts.css" rel="stylesheet">
+
+
+  <!-- <link rel="stylesheet" href="assets/css/pagination.css" /> -->
+  <link href="assets/vendor/mobiscroll/mobiscroll.min.css" rel="stylesheet" />
+  <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/fomantic-ui@2.9.3/dist/semantic.min.css" />
+  <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/regular/style.css" />
+  <link rel="stylesheet" href="assets/vendor/cdn-local/css/shepherd.css" />
+  <link rel="stylesheet" href="assets/css/style.css" />
+  <script src="assets/js/data.js"></script>
+  <script src="assets/vendor/highcharts-12.5/highcharts.js"></script>
+
+  <script src="assets/vendor/highcharts-12.5/modules/boost.js"></script>
+  <script src="assets/vendor/highcharts-12.5/modules/exporting.js"></script>
+  <script src="assets/vendor/highcharts-12.5/modules/export-data.js"></script>
+  <script src="assets/vendor/highcharts-12.5/modules/accessibility.js"></script>
+  <script src="assets/vendor/highcharts-12.5/modules/sonification.js"></script>
+
+
+</head>
+
+<body>
+  <a href="#main-content" class="  skip-link">Skip to Charts</a>
+<div id="desktop-shield">
+    <div class="shield-content">
+        <img src="media/undraw_dashboard_p93p.svg" alt="Desktop Only" class="shield-svg">
+        <h1>Optimal on Desktop</h1>
+        <p>This analytics dashboard is optimized for large screens to ensure data precision. Please switch to a device with a width of 1024px or more.</p>
+    </div>
+</div>
+  <div class="ui modal tiny" id="spectrumData" role="dialog" aria-modal="true" aria-labelledby="spectrumDataLabel">
+    <button class="ui icon   close close-modal-btn" aria-label="Close modal">
+      <i class="icon close" aria-hidden="true"></i>
+    </button>
+
+    <div class="header" id="spectrumDataLabel">Category Details</div>
+    <div class="content spectrumCategoryData" tabindex="0">
+    </div>
+    <div class="actions">
+      <button type="button" class="ui logo-button deny button">Close</button>
+    </div>
+  </div>
+
+  <div class="ui research-study-modal modal" id="studyAbstractModal" role="dialog" aria-modal="true"
+    aria-labelledby="abstractModalHeader">
+    <button class="ui icon   close close-modal-btn" aria-label="Close modal">
+      <i class="icon close" aria-hidden="true"></i>
+    </button>
+
+    <div class="header" id="abstractModalHeader">Study Details</div>
+    <div class="content">
+      <div class="ui abstract-content-area" id="abstractModalContent" tabindex="0"></div>
+    </div>
+    <div class="actions">
+      <button type="button" class="ui black deny button">Close</button>
+    </div>
+  </div>
+
+  <div class="wrapper">
+
+
+    <div class="flexContainer">
+
+      <div class="sidebar-filters">
+        <div class="sidebar-row-1 ui basic segment">
+          <div class="logo-text-group">
+            <!-- <img src="media/chart-icon.png" alt="" aria-hidden="true" class="appLogo" /> -->
+            <h1 class="sidebar-logo-title">PHT LAB</h1>
+            <div class="four wide column right aligned">
+              <button class="ui icon button close-sidebar" aria-label="Close Filter Sidebar">
+                <i class="close icon"></i>
+              </button>
+            </div>
+          </div>
+          <h3 class="filter-heading">Apply Filters</h3>
+        </div>
+
+        <div class="sidebar-row-2 ui segment">
+          <div class="ui infoIcon" data-tooltip="Type to Filter" data-position="left center" data-variation="mini"
+            aria-hidden="true">
+            <i class="circle info icon"></i>
+          </div>
+          <div class="filter-section-static" id="general-info-section">
+            <h4 class="filterHeader ui top header" tabindex="0">
+              General Information
+            </h4>
+
+            <div class="filter-content-wrapper">
+              <div class="position-relative">
+
+<form class="ui form inputFilters"  >
+  <div class="ui field question">
+    <label for="titleFilter">Title</label>
+    <div class="ui fluid input">
+      <input type="text" id="titleFilter" placeholder="Enter the Title" />
+    </div>
+  </div>
+
+  <div class="ui field question">
+    <label for="authorFilter">Lead Author (e.g., John Doe, Jane Smith)</label>
+    <div class="ui fluid input">
+      <input type="text" id="authorFilter" 
+             placeholder="Enter the author details"
+             pattern="^[a-zA-Z ]+([,;][a-zA-Z ]+)*" 
+             title="Please enter author name (e.g., Smith, Doe)" />
+    </div>
+  </div>
+
+  <div class="ui field question">
+    <label for="YearFilter">Year (e.g., 2000-2010, 2000):</label>
+    <div class="ui fluid input">
+      <input type="text" id="YearFilter" 
+             placeholder="Enter the year range or value"
+             pattern="^(\d{4}-\d{4}|\d{4})" 
+             title="Enter a 4-digit year (2020) or a range (2010-2020)" />
+    </div>
+  </div>
+
+  <div class="ui field question">
+    <label for="PagesFilter">Pages: (e.g., 0-200, 10)</label>
+    <div class="ui fluid input">
+      <input type="text" id="PagesFilter" 
+             placeholder="Enter the page range or value"
+             pattern="^(\d+|\d+-\d+)" 
+             title="Enter a number or a numeric range (e.g., 10-50)" />
+    </div>
+  </div>
+
+  <div class="ui field question">
+    <label for="NotesFilter">Notes (e.g., Research Gaps)</label>
+    <div class="ui fluid input">
+      <input type="text" id="NotesFilter" placeholder="Enter the text" />
+    </div>
+  </div>
+  
+</form>
+              </div>
+            </div>
+          </div>
+
+
+          <div class="ui attached segment">
+            <h4 class="filterHeader ui top header" tabindex="0">PHT Lab Framework</h4>
+            <div class="ui search fluid multiple selection dropdown firstDropdown"  
+              >
+              <input name="tags" type="hidden">
+              <i class="dropdown icon"></i>
+              <div class="default text">choose filters or search...</div>
+
+              <div class="menu">
+
+                <!-- Fun First vs. Utility First -->
+                <div class="header">Fun First vs. Utility First (Initial Design Intention)</div>
+                <div class="divider"></div>
+                <div class="item" data-value="fun_totally">Totally fun first (i.e., Entertainment game reappropriated)
+                </div>
+                <div class="item" data-value="fun_mostly">Mostly fun first (i.e., Design workshop with disabled
+                  stakeholders)</div>
+                <div class="item" data-value="fun_utility_both">Both fun and utility first (i.e., Design workshop with
+                  diverse stakeholders)</div>
+                <div class="item" data-value="utility_mostly">Mostly utility first (i.e., primary utilitarian mechanic
+                  designed first)</div>
+                <div class="item" data-value="utility_totally">Totally utility first (i.e., made by clinicians, fun
+                  incorporated later)</div>
+                <div class="item" data-value="fun_utility_undisclosed">Undisclosed/Unkown, but the paper does include a
+                  game/play system or experience</div>
+                <div class="item" data-value="fun_utility_na">Not Applicable</div>
+
+                <!-- Play vs. Game -->
+                <div class="header">Play vs. Game</div>
+                <div class="divider"></div>
+                <div class="item" data-value="play_unstructured">Unstructured play (i.e., no rules, making art)</div>
+                <div class="item" data-value="play_semi_structured">Semi-structured play (i.e., playground game)</div>
+                <div class="item" data-value="play_flexible_rules">Flexible structure with rules (i.e., improv)</div>
+                <div class="item" data-value="game_flexible">Flexible game (i.e., board game with house rules)</div>
+                <div class="item" data-value="game_rigid">Game with rigid rules (i.e., video game)</div>
+                <div class="item" data-value="play_game_undisclosed">Undisclosed/Unkown, but the paper does include a
+                  game/play system or experience</div>
+                <div class="item" data-value="play_game_na">Not Applicable</div>
+
+                <!-- Skill vs. Chance -->
+                <div class="header">Skill vs. Chance</div>
+                <div class="divider"></div>
+                <div class="item" data-value="skill_entirely">Entirely skill-based (i.e., trivia, sports)</div>
+                <div class="item" data-value="skill_mostly">Mostly skill-based (i.e., Mario Cart)</div>
+                <div class="item" data-value="skill_chance_equal">Equally skill and chance based (i.e., Catan)</div>
+                <div class="item" data-value="chance_mostly">Mostly chance-based (i.e., Uno)</div>
+                <div class="item" data-value="chance_entirely">Entirely chance-based (i.e., all dice)</div>
+                <div class="item" data-value="skill_chance_undisclosed">Undisclosed/Unkown, but the paper does include a
+                  game/play system or experience</div>
+                <div class="item" data-value="skill_chance_na">Not Applicable</div>
+
+                <!-- Social vs. Solo -->
+                <div class="header">Social vs. Solo</div>
+                <div class="divider"></div>
+                <div class="item" data-value="solo_entirely">Entirely Solo (i.e., Solitaire)</div>
+                <div class="item" data-value="solo_mostly_ai">Mostly Solo, but can play against AI (i.e., Single player
+                  StarCraft)</div>
+                <div class="item" data-value="solo_social_mixed">Mix of solo and social affordances (i.e., Animal
+                  Crossing)</div>
+                <div class="item" data-value="social_mostly">Mostly social, but aspects are independent (i.e., House on
+                  Hill haunt transition)</div>
+                <div class="item" data-value="social_entirely">Entirely social (i.e., Tag)</div>
+                <div class="item" data-value="social_solo_undisclosed">Undisclosed/Unkown, but the paper does include a
+                  game/play system or experience</div>
+                <div class="item" data-value="social_solo_na">Not Applicable</div>
+
+                <!-- Sequential vs. Simultaneous -->
+                <div class="header">Sequential vs. Simultaneous</div>
+                <div class="divider"></div>
+                <div class="item" data-value="turn_based">Entirely Turn-based (i.e., Tic Tak Toe)</div>
+                <div class="item" data-value="step_based">Follows a set of steps (i.e., Viticulture's dynamic turn
+                  ordering)</div>
+                <div class="item" data-value="turn_plus_anytime">Turns are taken, but some actions can be taken at
+                  anytime (i.e., Pandemic)</div>
+                <div class="item" data-value="mostly_simultaneous">Most actions can be taken at any time, but there are
+                  some phases (i.e., PvP death reset timer)</div>
+                <div class="item" data-value="simultaneous_entirely">Entirely Simultaneous (i.e., race)</div>
+                <div class="item" data-value="seq_sim_undisclosed">Undisclosed/Unkown, but the paper does include a
+                  game/play system or experience</div>
+                <div class="item" data-value="seq_sim_na">Not Applicable</div>
+
+                <!-- Synchronous vs. Asynchronous -->
+                <div class="header">Synchronous vs. Asynchronous</div>
+                <div class="divider"></div>
+                <div class="item" data-value="sync_entirely">Entirely Synchronous (i.e., RTS game)</div>
+                <div class="item" data-value="sync_mostly">Mostly Synchronous with few asynchronous affordances (i.e.,
+                  League of Legends)</div>
+                <div class="item" data-value="sync_async_equal">Equal mix of synchronous and asynchronous affordances
+                  (i.e., World of Warcraft)</div>
+                <div class="item" data-value="async_mostly">Mostly asynchronous with few synchronous affordances (i.e.,
+                  Scrabble Go)</div>
+                <div class="item" data-value="async_entirely">Entirely asynchronous (i.e., postage mail)</div>
+                <div class="item" data-value="sync_async_undisclosed">Undisclosed/Unknown, but the paper does include a
+                  game/play system or experience</div>
+                <div class="item" data-value="sync_async_na">Not Applicable</div>
+
+                <!-- Competitive vs. Collaborative -->
+                <div class="header">Competitive vs. Collaborative</div>
+                <div class="divider"></div>
+                <div class="item" data-value="competitive_entirely">Entirely Competitive (i.e., Spit card game)</div>
+                <div class="item" data-value="competitive_mostly">Mostly Competitive, but sometimes collaboration is
+                  important (i.e., Forbidden Island)</div>
+                <div class="item" data-value="competitive_collab_mixed">Mix of competitive and collaborative (i.e.,
+                  Mario party 2 vs 2 mini games)</div>
+                <div class="item" data-value="collaborative_mostly">Mostly Collaborative (i.e., Animal Crossing)</div>
+                <div class="item" data-value="collaborative_entirely">Entirely Collaborative (i.e., Pandemic)</div>
+                <div class="item" data-value="comp_collab_undisclosed">Undisclosed/Unkown, but the paper does include a
+                  game/play system or experience</div>
+                <div class="item" data-value="comp_collab_na">Not Applicable</div>
+
+                <!-- Symmetrical vs. Asymmetrical -->
+                <div class="header">Symmetrical vs. Asymmetrical</div>
+                <div class="divider"></div>
+                <div class="item" data-value="symmetrical_entirely">Entirely Symmetrical (i.e., Tik tac toe)</div>
+                <div class="item" data-value="symmetrical_mostly">Mostly Symmetrical (i.e., Uno)</div>
+                <div class="item" data-value="symmetrical_asym_mixed">Both Symmetrical and Asymmetrical (i.e.,
+                  Pandemic—similar turn structure with different character abilities)</div>
+                <div class="item" data-value="asymmetrical_mostly">Mostly Asymmetrical (i.e., Tag)</div>
+                <div class="item" data-value="asymmetrical_entirely">Entirely Asymmetrical (i.e., Keep talking nobody
+                  explodes)</div>
+                <div class="item" data-value="sym_asym_undisclosed">Undisclosed/Unknown, but the paper does include a
+                  game/play system or experience</div>
+                <div class="item" data-value="sym_asym_na">Not Applicable</div>
+
+                <!-- Experiential Play Value Classification -->
+                <div class="header">Experiential Play Value Classification</div>
+                <div class="divider"></div>
+                <div class="item" data-value="play_sensory">Sensory (i.e., kaleidoscope)</div>
+                <div class="item" data-value="play_fantasy">Fantasy (i.e., role playing)</div>
+                <div class="item" data-value="play_construction">Construction (i.e., Music, painting, building)</div>
+                <div class="item" data-value="play_challenge">Challenge (Testing physical or mental abilities against
+                  others or self)</div>
+                <div class="item" data-value="play_value_undisclosed">Undisclosed/Unkown, but the paper does include a
+                  game/play system or experience</div>
+                <div class="item" data-value="play_value_na">Not Applicable</div>
+
+              </div>
+            </div>
+
+          </div>
+
+          <div class="ui attached segment">
+            <h4 class="filterHeader ui top header" tabindex="0">Characteristics of Included Studies</h4>
+            <div class="ui fluid multiple search selection dropdown secondDropdown"  
+             >
+              <input name="tags" type="hidden">
+              <i class="dropdown icon"></i>
+              <div class="default text">choose filters or search...</div>
+
+              <div class="menu">
+
+                <!-- Study Method -->
+                <div class="header">Study Method</div>
+                <div class="divider"></div>
+                <div class="item" data-value="study_interview">Interview</div>
+                <div class="item" data-value="study_workshop">Workshop or design session</div>
+                <div class="item" data-value="study_field">Field study</div>
+                <div class="item" data-value="study_usability">Usability testing</div>
+                <div class="item" data-value="study_case">Case study</div>
+                <div class="item" data-value="study_focus_group">Focus group</div>
+                <div class="item" data-value="study_controlled_experiment">Controlled experiment</div>
+                <div class="item" data-value="study_survey">Survey</div>
+                <div class="item" data-value="study_telemetry">Telemetry / Big data / CSCW</div>
+                <div class="item" data-value="study_secondary_analysis">Secondary Analysis</div>
+                <div class="item" data-value="study_no_data">No data collected</div>
+                <div class="item" data-value="study_other">Other</div>
+
+                <!-- Interview Methodology -->
+                <div class="header">Interview Methodology</div>
+                <div class="divider"></div>
+                <div class="item" data-value="interview_structured">Structured interview</div>
+                <div class="item" data-value="interview_semi_structured">Semi-structured interview</div>
+                <div class="item" data-value="interview_contextual">Contextual inquiry</div>
+                <div class="item" data-value="interview_na">Not applicable</div>
+                <div class="item" data-value="interview_other">Other</div>
+
+                <!-- Workshop Methodology -->
+                <div class="header">Workshop Methodology</div>
+                <div class="divider"></div>
+                <div class="item" data-value="workshop_action_research">Action research</div>
+                <div class="item" data-value="workshop_cooperative_dev">Cooperative method development</div>
+                <div class="item" data-value="workshop_speculative_design">Speculative design</div>
+                <div class="item" data-value="workshop_persona">Persona</div>
+                <div class="item" data-value="workshop_scenario">Scenario</div>
+                <div class="item" data-value="workshop_role_playing">Role playing</div>
+                <div class="item" data-value="workshop_affinity_diagram">Affinity diagram</div>
+                <div class="item" data-value="workshop_ideation">Ideation</div>
+                <div class="item" data-value="workshop_user_journey">User journey</div>
+                <div class="item" data-value="workshop_brainstormming">Brainstormming</div>
+                <div class="item" data-value="workshop_bodystormming">Bodystormming</div>
+                <div class="item" data-value="workshop_design_probe">Design probe</div>
+                <div class="item" data-value="workshop_prototyping">Prototyping</div>
+                <div class="item" data-value="workshop_mockup">Mock-up</div>
+                <div class="item" data-value="workshop_sketching">Sketching</div>
+                <div class="item" data-value="workshop_wireframing">Wireframing</div>
+                <div class="item" data-value="workshop_card_sorting">Card sorting</div>
+                <div class="item" data-value="workshop_storyboarding">Storyboarding</div>
+                <div class="item" data-value="workshop_use_case_theater">Use case theater</div>
+                <div class="item" data-value="workshop_object_theater">Object theater</div>
+                <div class="item" data-value="workshop_na">Not Applicable</div>
+                <div class="item" data-value="workshop_other">Other</div>
+
+                <!-- Field Study Methodology -->
+                <div class="header">Field study methodology (Only if field study selected above)</div>
+                <div class="divider"></div>
+                <div class="item" data-value="field_autoethnography">Autoethnography</div>
+                <div class="item" data-value="field_ethnography">Ethnography</div>
+                <div class="item" data-value="field_diary">Diary study</div>
+                <div class="item" data-value="field_cultural">Cultural</div>
+                <div class="item" data-value="field_wizard_of_oz">Wizard of Oz</div>
+                <div class="item" data-value="field_na">Not Applicable</div>
+                <div class="item" data-value="field_other">Other</div>
+
+                <!-- Usability Methodology -->
+                <div class="header">Usability Methodology</div>
+                <div class="divider"></div>
+                <div class="item" data-value="usability_exert">Exert analysis</div>
+                <div class="item" data-value="usability_think_aloud">Think aloud</div>
+                <div class="item" data-value="usability_cognitive_walkthrough">Cognitive walkthrough</div>
+                <div class="item" data-value="usability_heuristic">Heuristic analysis</div>
+                <div class="item" data-value="usability_na">Not Applicable</div>
+                <div class="item" data-value="usability_other">Other</div>
+
+                <!-- Technology Modality -->
+                <div class="header">Technology Modality</div>
+                <div class="divider"></div>
+                <div class="item" data-value="tech_mobile">Mobile</div>
+                <div class="item" data-value="tech_tablet">Tablet</div>
+                <div class="item" data-value="tech_wearable">Wearable</div>
+                <div class="item" data-value="tech_iot">IoT</div>
+                <div class="item" data-value="tech_assistive_device">Assistive Device</div>
+                <div class="item" data-value="tech_robot">Robot</div>
+                <div class="item" data-value="tech_tangible">Tangible Interface</div>
+                <div class="item" data-value="tech_pc">PC</div>
+                <div class="item" data-value="tech_vr">Virtual Reality</div>
+                <div class="item" data-value="tech_ar">Augmented Reality</div>
+                <div class="item" data-value="tech_none">No Technology</div>
+                <div class="item" data-value="tech_other">Other</div>
+
+                <!-- Context -->
+                <div class="header">Context</div>
+                <div class="divider"></div>
+                <div class="item" data-value="context_clinic">Clinic</div>
+                <div class="item" data-value="context_public_space">Public space (i.e., Bowling alley)</div>
+                <div class="item" data-value="context_home">Home</div>
+                <div class="item" data-value="context_school">School</div>
+                <div class="item" data-value="context_research_lab">Research lab</div>
+                <div class="item" data-value="context_social_media">Social media</div>
+                <div class="item" data-value="context_disability_space">Disability community space (i.e., Day program)
+                </div>
+                <div class="item" data-value="context_remote">Remote / Zoom</div>
+                <div class="item" data-value="context_unknown">Unknown</div>
+                <div class="item" data-value="context_na">Not applicable</div>
+                <div class="item" data-value="context_other">Other</div>
+
+              </div>
+            </div>
+
+          </div>
+
+          <div class="ui attached segment">
+            <h4 class="filterHeader ui top header" tabindex="0">Participants</h4>
+            <div class="ui fluid multiple search selection dropdown thirdDropdown"  
+           >
+              <input name="tags" type="hidden">
+              <i class="dropdown icon"></i>
+              <div class="default text">choose filters or search...</div>
+
+              <div class="menu">
+
+                <!-- Community of focus -->
+                <div class="header">Community of focus</div>
+                <div class="divider"></div>
+                <div class="item" data-value="community_blv">Blind or low vision (BLV)</div>
+                <div class="item" data-value="community_dhh">Deaf or hard of hearing (DHH)</div>
+                <div class="item" data-value="community_autism">Autism</div>
+                <div class="item" data-value="community_idd">Intellectual or developmental disability (IDD)</div>
+                <div class="item" data-value="community_motor_physical">Motor of physical impairment</div>
+                <div class="item" data-value="community_communication_speech">Communication / Speech</div>
+                <div class="item" data-value="community_cognitive">Cognitive impairment</div>
+                <div class="item" data-value="community_older_adult">Older adult</div>
+                <div class="item" data-value="community_general_disability">General disability or accessibility</div>
+                <div class="item" data-value="community_other">Other</div>
+
+                <!-- Participant Groups -->
+                <div class="header">Participant Groups</div>
+                <div class="divider"></div>
+                <div class="item" data-value="participants_pwd">People with disabilities</div>
+                <div class="item" data-value="participants_older_adults">Older adults</div>
+                <div class="item" data-value="participants_caregivers">Caregivers</div>
+                <div class="item" data-value="participants_specialists">Specialists (e.g., therapists, teachers)</div>
+                <div class="item" data-value="participants_without_disabilities">People without disabilities</div>
+                <div class="item" data-value="participants_none">No user involvement</div>
+                <div class="item" data-value="participants_other">Other</div>
+
+                <!-- User Involvement -->
+                <div class="header">User Involvement</div>
+                <div class="divider"></div>
+                <div class="item" data-value="involvement_participatory_no_disability">
+                  Participatory design with stakeholders without disabilities
+                </div>
+                <div class="item" data-value="involvement_participatory_disability">
+                  Participatory design with stakeholders with disabilities
+                </div>
+                <div class="item" data-value="involvement_evaluation_no_disability">
+                  User evaluation with stakeholders without disabilities
+                </div>
+                <div class="item" data-value="involvement_evaluation_disability">
+                  User evaluation with stakeholders with disabilities
+                </div>
+                <div class="item" data-value="involvement_none">
+                  No representative user involvement
+                </div>
+                <div class="item" data-value="involvement_na">Not applicable</div>
+
+                <!-- Use of proxies -->
+                <div class="header">Use of proxies</div>
+                <div class="divider"></div>
+                <div class="item" data-value="proxies_yes">Yes</div>
+                <div class="item" data-value="proxies_no">No</div>
+                <div class="item" data-value="proxies_no_users">No user involvement</div>
+
+                <!-- Method of recruitment of participants -->
+                <div class="header">Method of recruitment of participants</div>
+                <div class="divider"></div>
+                <div class="item" data-value="recruit_phone">Phone</div>
+                <div class="item" data-value="recruit_mail">Mail</div>
+                <div class="item" data-value="recruit_email">Email</div>
+                <div class="item" data-value="recruit_convenience">
+                  Convienience sampling (i.e., Day program)
+                </div>
+                <div class="item" data-value="recruit_snowball">Snowball</div>
+                <div class="item" data-value="recruit_word_of_mouth">Word of mouth</div>
+                <div class="item" data-value="recruit_flier">Flier</div>
+                <div class="item" data-value="recruit_social_media">Social Media</div>
+                <div class="item" data-value="recruit_clinic">Clinic</div>
+                <div class="item" data-value="recruit_none">No user involvement</div>
+                <div class="item" data-value="recruit_undisclosed">Undisclosed</div>
+                <div class="item" data-value="recruit_other">Other</div>
+
+                <!-- Issue Addressed -->
+                <div class="header">Issue Addressed</div>
+                <div class="divider"></div>
+                <div class="item" data-value="issue_independence">Increasing independence</div>
+                <div class="item" data-value="issue_digital_access">Increasing digital access</div>
+                <div class="item" data-value="issue_physical_access">Increasing physical access</div>
+                <div class="item" data-value="issue_user_understanding">Increasing understanding of users</div>
+                <div class="item" data-value="issue_communication">Supporting communication</div>
+                <div class="item" data-value="issue_personal_informatics">
+                  Personal informatics and changing behavior
+                </div>
+                <div class="item" data-value="issue_education">Education</div>
+                <div class="item" data-value="issue_enrichment">
+                  Increasing opportunities for enrichment
+                </div>
+                <div class="item" data-value="issue_other">Other</div>
+
+                <!-- Contribution Type -->
+                <div class="header">Contribution Type</div>
+                <div class="divider"></div>
+                <div class="item" data-value="contribution_empirical">Empirical</div>
+                <div class="item" data-value="contribution_artifact">Artifact</div>
+                <div class="item" data-value="contribution_methodological">Methodological</div>
+                <div class="item" data-value="contribution_theoretical">Theoretical</div>
+                <div class="item" data-value="contribution_dataset">Dataset</div>
+                <div class="item" data-value="contribution_survey">Survey</div>
+
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="sidebar-row-3 ui basic segment">
+          <!-- <div class="ui divider"></div> -->
+
+          <div class="records" aria-live="polite" aria-atomic="true">
+            <h3 class="recordsStatus ui aligned header">Records</h3>
+            <div class="ui two column centered grid" role="presentation">
+
+              <div class="column center aligned" role="group" aria-label="Filtered Count">
+                <div class="ui small header" aria-hidden="true">
+                  <span class="label-color"><i class="filter icon"></i></span>
+                  <div class="content label-color">Filtered</div>
+                </div>
+                <span id="filtered-count-value" class="currentRecords lable-value"></span>
+              </div>
+
+              <div class="column center aligned" role="group" aria-label="Total Count">
+                <div class="ui small header" aria-hidden="true">
+                  <span class="label-color"><i class="table icon"></i></span>
+                  <div class="content label-color">Total</div>
+                </div>
+                <span class="totalRecords lable-value"></span>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- <div class="ui divider"></div> -->
+          <div class="buttons-container">
+            <button class="ui fluid button" onclick="applyFilters('reset')" data-tooltip="Remove Filters"
+              aria-label="Reset all filters">
+              <i class="trash alternate icon"></i>
+            </button>
+
+            <div class="import-wrapper">
+              <button id="import-data-button" class="ui fluid button" data-tooltip="Import Filters"
+                aria-label="Import filter settings">
+                <i class="download icon"></i>
+              </button>
+              <input type="file" id="import-file-input" accept=".xlsx" style="display: none" />
+            </div>
+
+            <button class="ui fluid button" onclick="exportFilteredData()" data-tooltip="Export Filters"
+              aria-label="Export current data">
+              <i class="upload icon"></i>
+            </button>
+
+            <button class="ui fluid button" onclick="getPlot()" data-tooltip="Reset Chart" aria-label="Refresh Chart">
+              <i class="redo icon"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="box" id="main-content" tabindex="-1" role="main" aria-label="Research Data and Charts">
+        <div id="navigation-announcer" class="sr-only" aria-live="polite"></div>
+        <div id="sr-announcer" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+        <div class="ui grid page-header">
+          <div class="nine wide computer sixteen wide mobile column">
+            <div class="ui top attached tabular menu mx-auto" id="myTab" role="tablist">
+              <a class="item active" data-tab="Show-plot" id="Show-plot" onclick="animateOptions('plot')" role="tab"
+                aria-selected="true" aria-controls="show-plot-pane" tabindex="0">
+                <i class="ph ph-chart-bar"></i> Plot
+              </a>
+              <a class="item" data-tab="Show-data" id="Show-data" onclick="animateOptions('plotFilter')" role="tab"
+                aria-selected="false" aria-controls="Show-data-pane" tabindex="0">
+                <i class="ph ph-rows-plus-bottom"></i> Data
+              </a>
+              <a class="item" data-tab="ratings-grid" id="ratings-grid" onclick="animateOptions('hide')" role="tab"
+                aria-selected="false" aria-controls="ratings-pane" tabindex="0">
+                <i class="ph ph-chart-scatter"></i> Ratings
+              </a>
+              <a class="item" data-tab="Show-grid" id="Show-grid" onclick="animateOptions('hide')" role="tab"
+                aria-selected="false" aria-controls="Show-grid-pane" tabindex="0">
+                <i class="ph ph-grid-nine"></i> Spectrum
+              </a>
+            </div>
+          </div>
+
+
+
+          <div class="four wide computer fourteen wide mobile column plotOptionsContainer">
+            <div class="plotOptionsDiv expand" role="group"  
+              aria-hidden="false">
+            
+
+                  <div class="ui search fluid   selection dropdown"   id="plotFilter"
+ 
+ 
+    
+     aria-expanded="false"
+    >
+     
+    <input name="tags" type="hidden">
+    <i class="dropdown icon"></i>
+    <div class="default text">choose plot</div>
+    <div class="menu"></div>
+</div>
+
+
+            </div>
+            <div class="plotFilterMultiSelect"   aria-hidden="true">
+
+               
+               <div class="ui search fluid multiple selection dropdown" 
+     role="combobox" 
+     id="removeColumns"
+     aria-label="Select PHT Lab Framework tags"
+     aria-expanded="false"
+     aria-haspopup="listbox">
+     
+    <input name="tags" type="hidden">
+    <i class="dropdown icon"></i>
+    <div class="default text">choose filters or search...</div>
+    <div class="menu"></div>
+</div>
+               
+            </div>
+          </div>
+
+          <div class="three wide computer eight wide tablet column position-relative switchContainer">
+            <!-- <button class="ui icon button sidebar-icon" aria-label="Open Filter Sidebar">
+                <i class="bars icon"></i>
+              </button> -->
+
+            <div class="hover-nav-container">
+              <button class="ui button hover-nav-trigger" aria-haspopup="true" aria-expanded="false"
+                aria-label="More options">
+                <i class="ph ph-gear"></i>
+              </button>
+
+              <div class="hover-nav-menu" role="menu">
+                <div class="hover-nav-item" role="none">
+                  <!-- <button class="ui animated button basic" 
+              id="restartTourButton" 
+              role="menuitem">
+        <div class="visible content">Start</div>
+        <div class="hidden content">Tour</div>
+      </button> -->
+                  <button class="ui icon button" id="restartTourButton" role="menuitem">
+                    Start Tour
+                  </button>
+                </div>
+
+                <div class="ui divider" role="separator"></div>
+
+                <div class="hover-nav-item" role="none" id="theme-toggle-container">
+                  <label class="switch">
+                    <input type="checkbox" id="theme" onchange="toggleTheme('theme')" tabindex="0" role="switch">
+                    <span class="slider"></span>
+                  </label>
+                  <span class="theme-label" id="theme-text">Light Mode</span>
+                </div>
+              </div>
+            </div>
+
+
+
+          </div>
+        </div>
+
+        <div id="myTabContent">
+          <div class="ui tab active" data-tab="Show-plot" id="show-plot-pane" role="tabpanel" tabindex="0"
+            aria-labelledby="sr-plot-main-title">
+
+            <h2 id="sr-plot-main-title" class="sr-only">Research Trends Visualization: Comprehensive Analysis</h2>
+
+            <div class="ui top attached tabular menu mx-auto" role="tablist" aria-label="Plot view options">
+              <a class="item active" data-tab="Show-plot/visual" role="tab" aria-selected="true" tabindex="0"
+                aria-controls="visual-panel" id="tab-visual">
+                <i class="ph ph-chart-bar"></i> Visual
+              </a>
+              <a class="item" data-tab="Show-plot/table" role="tab" tabindex="0" aria-selected="false"
+                aria-controls="table-panel" id="tab-table">
+                <i class="ph ph-table"></i> Table
+              </a>
+
+            </div>
+
+            <div class="ui tab active" id="visual-panel" data-tab="Show-plot/visual" role="tabpanel"
+              aria-labelledby="tab-visual">
+              <h3 class="sr-only">Interactive Data Graph: Distribution and Frequency Trends</h3>
+              <div id="plotIt" role="group" aria-label="Interactive Data Graph. Use arrow keys to explore data points."
+                tabindex="0"></div>
+              <div class="plot-error"></div>
+            </div>
+
+            <div class="ui tab" id="table-panel" data-tab="Show-plot/table" role="tabpanel" tabindex="0" hidden
+              aria-labelledby="sr-plot-table-title">
+
+              <div id="plotDataTableContainer">
+                <h3 id="sr-plot-table-title" class="ui header">Tabular Data View: Categorical Breakdowns</h3>
+
+                <table id="plotDataTable" class="ui celled striped table" role="grid">
+                  <thead>
+                    <tr id="sr-table-header-row"></tr>
+                  </thead>
+                  <tbody id="sr-table-body"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          <div class="ui tab" data-tab="Show-data" id="Show-data-pane" role="tabpanel" tabindex="0"
+            aria-labelledby="sr-data-title">
+            <h2 id="sr-data-title" class="sr-only">Study Record Inventory: Detailed Qualitative Research Cards</h2>
+
+            <div class="secondUI" role="list" aria-label="Studies list"></div>
+            <nav id="pagination-container" aria-label="Pagination navigation"></nav>
+          </div>
+
+          <div class="ui tab" data-tab="ratings-grid" id="ratings-pane" role="tabpanel" tabindex="0"
+            aria-labelledby="sr-ratings-title">
+            <h2 id="sr-ratings-title" class="sr-only">Classification Distribution: Frequency of Ratings along the
+              Research Framework</h2>
+            <div class="spectrum-error"></div>
+            <div class="d-flex flex-wrap spectrumRow">
+              <div class="spectrumContainer">
+                <div class="ui infoIcon standalone"
+                  data-html="<div><p><strong>How to access all the features of the grid?</strong></p><ul><li>Click cells to view study lists.</li><li>Adjust intensity using the slider.</li><li>Hover for dimension details.</li></ul></div>"
+                  data-position="left center" tabindex="0" role="button" aria-label="Grid Instructions">
+                  <i class="circle info icon"></i>
+                </div>
+
+                <h3 class="">Ratings along each classification</h3>
+
+                <div class="flexRow flex-grow-1">
+                  <div class="innerCol col-60">
+                    <table class="spectrumTable type-1">
+                      <tr class="ratings">
+                        <th> </th>
+                        <td>Totally </td>
+                        <td>Mostly</td>
+                        <td>Both</td>
+                        <td>Mostly</td>
+                        <td>Totally</td>
+                        <th> </th>
+                      </tr>
+                      <tr data-row="Fun-First vs. Utility-First (Initial Design Intention)">
+                        <th>Fun-First</th>
+                        <td data-column="Totally fun first"></td>
+                        <td data-column="Mostly fun first"></td>
+                        <td data-column="Both fun and utility first"></td>
+                        <td data-column="Mostly utility first"></td>
+                        <td data-column="Totally utility first"></td>
+                        <th>Utility-First</th>
+                      </tr>
+                      <tr data-row='Play vs. Game'>
+                        <th>Game</th>
+                        <td data-column="Unstructured play"></td>
+                        <td data-column="Semi-structured play"></td>
+                        <td data-column="Flexible structure with rules"></td>
+                        <td data-column="Flexible game"></td>
+                        <td data-column="Game with rigid rules"></td>
+                        <th>Play</th>
+                      </tr>
+                      <tr data-row='Social vs. Solo'>
+                        <th>Social</th>
+                        <td data-column="Entirely Solo"></td>
+                        <td data-column="Mostly Solo, but can play against AI"></td>
+                        <td data-column="Mix of solo and social affordances"></td>
+                        <td data-column="Mostly social, but aspects are independent"></td>
+                        <td data-column="Entirely social"></td>
+                        <th>Solo</th>
+                      </tr>
+                      <tr data-row='Competitive vs. Collaborative'>
+                        <th>Competitive</th>
+                        <td data-column="Entirely Competitive"></td>
+                        <td data-column="Mostly Competitive, but sometimes collaboration is important"></td>
+                        <td data-column="Mix of competitive and collaborative"></td>
+                        <td data-column="Mostly Collaborative"></td>
+                        <td data-column="Entirely Collaborative"></td>
+                        <th>Collaborative</th>
+                      </tr>
+                      <tr data-row='Skill vs. Chance'>
+                        <th>Skill</th>
+                        <td data-column="Entirely skill-based"></td>
+                        <td data-column="Mostly skill-based"></td>
+                        <td data-column="Equally skill and chance based"></td>
+                        <td data-column="Mostly chance-based"></td>
+                        <td data-column="Entirely chance-based"></td>
+                        <th>Chance</th>
+                      </tr>
+                      <tr data-row='Symmetrical vs. Asymmetrical'>
+                        <th>Symmetrical</th>
+                        <td data-column="Entirely Symmetrical"></td>
+                        <td data-column="Mostly Symmetrical"></td>
+                        <td data-column="Both Symetrical and Asymetrical"></td>
+                        <td data-column="Mostly Asymmetrical"></td>
+                        <td data-column="Entirely Asymetrical"></td>
+                        <th>Asymmetrical</th>
+                      </tr>
+                      <tr data-row='Sequential vs. Simultaneous'>
+                        <th>Sequential</th>
+                        <td data-column="Entirely Turn-based"></td>
+                        <td data-column="Follows a set of steps"></td>
+                        <td data-column="Turns are taken, but some actions can be taken at anytime"></td>
+                        <td data-column="Most actions can be taken at any time but there are some phases"></td>
+                        <td data-column="Entirely Simultaneous"></td>
+                        <th>Simultaneous</th>
+                      </tr>
+                      <tr data-row='Synchronous vs. Asynchronous'>
+                        <th>Synchronous</th>
+                        <td data-column="Entirely Synchronous"></td>
+                        <td data-column="Mostly Synchronous with few asynchronous affordances"></td>
+                        <td data-column="Equal mix of synchronous and asynchronous affordances"></td>
+                        <td data-column="Mostly asynchronous with few synchronous affordances"></td>
+                        <td data-column="Entirely asynchronous"></td>
+                        <th>Asynchronous</th>
+                      </tr>
+                    </table>
+                  </div>
+
+                  <div class="innerCol col-30">
+                    <p id="intensity-label-1">Adjust Intensity</p>
+                    <input type="range" class="spectrumIntensity" id="type1Intensity"
+                      aria-labelledby="intensity-label-1" defaultValue="20" min="1" max="100" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="ui tab" data-tab="Show-grid" id="Show-grid-pane" role="tabpanel" tabindex="0"
+            aria-labelledby="sr-spectrum-title">
+            <h2 id="sr-spectrum-title" class="sr-only">Heatmap Frequency: Intensity of Categorial Ratings across Study
+              Dimensions</h2>
+            <div class="spectrum-error"></div>
+            <div class="d-flex flex-wrap spectrumRow">
+              <div class="spectrumContainer">
+                <div class="ui infoIcon standalone"
+                  data-html="<div><p><strong>How to access all the features of the grid?</strong></p><ul><li>Click cells to view study lists.</li><li>Adjust intensity using the slider.</li><li>Hover for dimension details.</li></ul></div>"
+                  data-position="left center" tabindex="0" role="button" aria-label="Grid Instructions">
+                  <i class="circle info icon"></i>
+                </div>
+
+                <h3 class="">Frequency of ratings along each categorial spectrum</h3>
+
+                <div class="flexRow flex-grow-1">
+                  <div class="innerCol col-60">
+                    <table class="spectrumTable type-2">
+                      <tr class="ratings">
+                        <th> </th>
+                        <td>Totally </td>
+                        <td>Mostly</td>
+                        <td>Both</td>
+                        <td>Mostly</td>
+                        <td>Totally</td>
+                        <th> </th>
+                      </tr>
+                      <tr data-row="Fun-First vs. Utility-First (Initial Design Intention)">
+                        <th>Fun-First</th>
+                        <td data-column="Totally fun first"></td>
+                        <td data-column="Mostly fun first"></td>
+                        <td data-column="Both fun and utility first"></td>
+                        <td data-column="Mostly utility first"></td>
+                        <td data-column="Totally utility first"></td>
+                        <th>Utility-First</th>
+                      </tr>
+                      <tr data-row='Play vs. Game'>
+                        <th>Game</th>
+                        <td data-column="Unstructured play"></td>
+                        <td data-column="Semi-structured play"></td>
+                        <td data-column="Flexible structure with rules"></td>
+                        <td data-column="Flexible game"></td>
+                        <td data-column="Game with rigid rules"></td>
+                        <th>Play</th>
+                      </tr>
+                      <tr data-row='Social vs. Solo'>
+                        <th>Social</th>
+                        <td data-column="Entirely Solo"></td>
+                        <td data-column="Mostly Solo, but can play against AI"></td>
+                        <td data-column="Mix of solo and social affordances"></td>
+                        <td data-column="Mostly social, but aspects are independent"></td>
+                        <td data-column="Entirely social"></td>
+                        <th>Solo</th>
+                      </tr>
+                      <tr data-row='Competitive vs. Collaborative'>
+                        <th>Competitive</th>
+                        <td data-column="Entirely Competitive"></td>
+                        <td data-column="Mostly Competitive, but sometimes collaboration is important"></td>
+                        <td data-column="Mix of competitive and collaborative"></td>
+                        <td data-column="Mostly Collaborative"></td>
+                        <td data-column="Entirely Collaborative"></td>
+                        <th>Collaborative</th>
+                      </tr>
+                      <tr data-row='Skill vs. Chance'>
+                        <th>Skill</th>
+                        <td data-column="Entirely skill-based"></td>
+                        <td data-column="Mostly skill-based"></td>
+                        <td data-column="Equally skill and chance based"></td>
+                        <td data-column="Mostly chance-based"></td>
+                        <td data-column="Entirely chance-based"></td>
+                        <th>Chance</th>
+                      </tr>
+                      <tr data-row='Symmetrical vs. Asymmetrical'>
+                        <th>Symmetrical</th>
+                        <td data-column="Entirely Symmetrical"></td>
+                        <td data-column="Mostly Symmetrical"></td>
+                        <td data-column="Both Symetrical and Asymetrical"></td>
+                        <td data-column="Mostly Asymmetrical"></td>
+                        <td data-column="Entirely Asymetrical"></td>
+                        <th>Asymmetrical</th>
+                      </tr>
+                      <tr data-row='Sequential vs. Simultaneous'>
+                        <th>Sequential</th>
+                        <td data-column="Entirely Turn-based"></td>
+                        <td data-column="Follows a set of steps"></td>
+                        <td data-column="Turns are taken, but some actions can be taken at anytime"></td>
+                        <td data-column="Most actions can be taken at any time but there are some phases"></td>
+                        <td data-column="Entirely Simultaneous"></td>
+                        <th>Simultaneous</th>
+                      </tr>
+                      <tr data-row='Synchronous vs. Asynchronous'>
+                        <th>Synchronous</th>
+                        <td data-column="Entirely Synchronous"></td>
+                        <td data-column="Mostly Synchronous with few asynchronous affordances"></td>
+                        <td data-column="Equal mix of synchronous and asynchronous affordances"></td>
+                        <td data-column="Mostly asynchronous with few synchronous affordances"></td>
+                        <td data-column="Entirely asynchronous"></td>
+                        <th>Asynchronous</th>
+                      </tr>
+                    </table>
+                  </div>
+                  <div class="innerCol col-30">
+                    <p id="intensity-label-2">Adjust Intensity</p>
+                    <input type="range" class="spectrumIntensity" id="type2Intensity" defaultValue="20" min="1"
+                      max="100" aria-labelledby="intensity-label-2" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="assets/vendor/cdn-local/js/jquery-3.1.1.min.js"
+  crossorigin="anonymous"></script>
+
+
+  <!-- <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script> -->
+  <script src="assets/vendor/cdn-local/js/semantic.min.js"></script>
+
+  <script src="assets/js/pagination.js"></script>
+  <!-- <script src="https://cdn.plot.ly/plotly-2.31.1.min.js"></script> -->
+  <script src="assets/vendor/mobiscroll/mobiscroll.min.js"></script>
+
+  <script src="assets/vendor/cdn-local/js/shepherd.min.js"></script>
+  <!-- <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> -->
+  <script src="assets/vendor/cdn-local/js/xlsx.full.min.js"></script>
+
+  <script src="assets/js/script.js"></script>
+
+
+</body>
+
+</html>

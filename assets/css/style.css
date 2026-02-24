@@ -454,6 +454,10 @@ h3 {
     font-size: 0.9rem !important
 }
 
+.sidebar-row-2 .ui.selection.visible.dropdown>.text{
+    max-width: calc(100% - 50px);
+}
+
 .ui.selection.dropdown>.text {
     opacity: .8;
     white-space: nowrap;
@@ -524,6 +528,19 @@ h3 {
     font-weight: 800 !important;
     padding: 1rem 1rem 0.5rem !important;
     opacity: .7
+}
+
+
+.ui.multiple.search.dropdown>input.search {
+    position: absolute;
+    padding: 0;
+    max-width: calc(100% - 50px);
+    padding: .45238095em 0 .45238095em .64285714em;
+    width: 2.2em;
+    line-height: 1.21428571em;
+    width: 100% !important;
+    height: 100%;
+    margin: 0;
 }
 
 .ui.dropdown .menu>.divider {

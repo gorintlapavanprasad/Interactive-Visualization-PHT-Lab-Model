@@ -436,7 +436,9 @@ function applyFilters(args) {
 function updateFilterState(changedVal, key, action) {
     let current = allFilters[key] ? allFilters[key].split(",") : [];
     if (action === "add") current.push(changedVal);
-    else current = current.filter(v => v !== changedVal);
+    else if (action = "nuke_all_filters") current = [];
+    else   current = current.filter(v => v !== changedVal);
+  
     setDataFilters(current.join(","), key)
 }
 
@@ -513,7 +515,7 @@ function Drawplot(PlotFilter) {
             startOnTick: !0,
             endOnTick: !0,
             tickLength: 35,
-            tickColor: ds.borderSubtle,
+            tickColor: "#33415574",
             tickWidth: 1,
             labels: {
                 style: {
@@ -1070,7 +1072,7 @@ function toggleTheme() {
                         }
                     },
                     lineColor: ds.borderSubtle,
-                    tickColor: ds.borderSubtle
+                    tickColor: "#cbd5e166"
                 },
                 yAxis: {
                     labels: {
@@ -1170,10 +1172,24 @@ function doInitialization() {
         onRemove: function (value, text, $removedItem) {
             updateFilterState(value, type, "remove");
             $(this).find('input.search').focus()
+          
         },
         onShow: function () {
             $(this).find('.menu').attr('aria-hidden', 'false');
             $(this).find('.item').attr('tabindex', '0')
+        },
+
+        // 🎯 THE FIX: Catch the bulk "Clear All" action
+        onChange: function (value, text, $choice) {
+            // If the value is completely empty, the 'X' clear icon was clicked
+            if (!value || value.trim() === "") {
+                // Directly wipe this specific filter category from global state
+              updateFilterState("", type, "nuke_all_filters");
+                
+                // Return focus to the search input so keyboard users aren't lost
+                $(this).find('input.search').focus();
+            }
+             
         },
         onHide: function () {
             $(this).find('.menu').attr('aria-hidden', 'true');

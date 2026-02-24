@@ -467,12 +467,14 @@ h3 {
     text-shadow: 0 0 8px rgb(56 189 248 / .3)
 }
 
-.ui.dropdown .menu>.item {
+.ui.dropdown .menu>.item ,.sidebar-row-2 .ui.dropdown .menu>.item{
     color: var(--ds-text-primary) !important;
     padding: .75rem 1rem !important;
     font-size: 0.85rem !important;
     border-top: none !important;
-    transition: background 0.15s ease !important
+    transition: background 0.15s ease !important;
+       padding-left: 25px !important;
+
 }
 
 .ui.dropdown .menu>.item:hover {
@@ -491,7 +493,27 @@ h3 {
     background: var(--ds-bg-elevated) !important;
     color: var(--ds-accent-primary) !important;
     font-weight: 700 !important;
-    border-left: 3px solid var(--ds-accent-primary) !important
+    border-left: none !important; 
+  
+}
+
+/* 3. Inject the Phosphor Checkmark using a CSS Mask */
+.ui.dropdown .menu .active.item::before {
+    content: "" !important;
+    position: absolute;
+    left: 5px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 1.1em;
+    height: 1.1em;
+ 
+    
+    /* 🎨 The background color becomes the color of the icon */
+    background-color: var(--ds-accent-primary) !important; 
+    
+    /* ✂️ The mask cuts out the shape of the Phosphor checkmark */
+   -webkit-mask: url('https://raw.githubusercontent.com/phosphor-icons/core/main/assets/bold/check-bold.svg') no-repeat center / contain;
+    mask: url('https://raw.githubusercontent.com/phosphor-icons/core/main/assets/bold/check-bold.svg') no-repeat center / contain;
 }
 
 .ui.dropdown .menu>.header {

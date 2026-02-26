@@ -1167,7 +1167,7 @@ function doInitialization() {
     trigger.addEventListener('focus', openMenu);
 
     document.getElementById('type1Intensity').value = 20;
-    document.getElementById('type2Intensity').value = 20;
+    document.getElementById('type2Intensity').value = 40;
     container.addEventListener('focusout', (e) => {
         if (!container.contains(e.relatedTarget)) {
             closeMenu()

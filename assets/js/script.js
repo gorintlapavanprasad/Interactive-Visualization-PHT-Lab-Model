@@ -356,7 +356,7 @@ function setDataFilters(value, args) {
     applyFilters()
 }
 const debouncedFilterExecution = debounce(() => {
-    
+
     applyFilters()
 }, 500);
 
@@ -437,8 +437,8 @@ function updateFilterState(changedVal, key, action) {
     let current = allFilters[key] ? allFilters[key].split(",") : [];
     if (action === "add") current.push(changedVal);
     else if (action = "nuke_all_filters") current = [];
-    else   current = current.filter(v => v !== changedVal);
-  
+    else current = current.filter(v => v !== changedVal);
+
     setDataFilters(current.join(","), key)
 }
 
@@ -535,6 +535,7 @@ function Drawplot(PlotFilter) {
         },
         exporting: {
             enabled: !0,
+            sourceWidth: Math.max(plotEl.clientWidth, 800),
             accessibility: {
                 enabled: !0
             },
@@ -557,20 +558,12 @@ function Drawplot(PlotFilter) {
                 interruptUser: !0
             },
             sonification: {
-                enabled: !0,
+                enabled: true,
                 defaultInstrumentOptions: {
                     instrument: 'basic1',
                     mapping: {
-                        pitch: {
-                            mapTo: 'y',
-                            min: 'c2',
-                            max: 'c6'
-                        },
-                        volume: {
-                            mapTo: 'y',
-                            min: 0.3,
-                            max: 0.9
-                        }
+                        pitch: { mapTo: 'y', min: 'c2', max: 'c6' },
+                        volume: { mapTo: 'y', min: 0.3, max: 0.9 }
                     }
                 }
             },
@@ -628,11 +621,21 @@ function Drawplot(PlotFilter) {
                 borderColor: ds.bgPanel,
                 borderRadius: 2,
                 cursor: 'pointer',
+                // point: {
+                //     events: {
+                //         mouseOver: function () {
+                //             if (this.sonify) {
+                //                 this.sonify()
+                //             }
+                //         }
+                //     }
+                // }
                 point: {
                     events: {
-                        mouseOver: function () {
+                        click: function () {
+                            // Ensure the sonification module is loaded and ready
                             if (this.sonify) {
-                                this.sonify()
+                                this.sonify();
                             }
                         }
                     }
@@ -640,13 +643,13 @@ function Drawplot(PlotFilter) {
             },
         },
         tooltip: {
-            enabled: !0,
+            enabled: !0, shared: true,
             backgroundColor: ds.bgPanel,
             style: {
                 color: ds.textPrimary
             },
-            headerFormat: '<b>{point.x}</b><br/>',
-            pointFormat: '{series.name}: {point.y}<br/>Total: {point.stackTotal}'
+            // headerFormat: '<b>{point.x}</b><br/>',
+            // pointFormat: '{series.name}: {point.y}<br/>Total: {point.stackTotal}'
         },
         series: series
     })
@@ -831,6 +834,7 @@ function applyColumnFilter(values) {
 }
 
 function displaySpectrum(param = 20) {
+
     const getDSVar = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
     const errors = document.querySelectorAll(".spectrum-error");
     const rows = document.querySelectorAll(".spectrumRow");
@@ -881,13 +885,29 @@ function displaySpectrum(param = 20) {
                 const shadowBase = currentTheme === "dark" ? 'rgba(56, 189, 248, 0.25)' : 'rgba(37, 99, 235, 0.15)';
                 const shadow = `inset 0 0 10px 100px ${shadowBase}`;
                 const boxShadow = intensity ? Array(Math.ceil(intensity)).fill(shadow).join(', ') : 'none';
+                // Apply Visual Styles
+                // Apply Visual Styles
                 if (el.closest('.type-1') && intensity) {
                     let pt = el.querySelector('.data-point') || document.createElement("div");
                     pt.className = "data-point";
                     pt.style.boxShadow = boxShadow;
-                    el.appendChild(pt)
+
+                    // The calculated pixel size
+                    const dotSize = Math.min(12 + (intensity * 1.5), 35);
+                    pt.style.width = `${dotSize}px`;
+                    pt.style.height = `${dotSize}px`;
+
+                    // 🎯 THE NEW RESPONSIVE LOCKS:
+                    // Forces the dot to never grow larger than 90% of its parent cell
+                    pt.style.maxWidth = "90%";
+                    pt.style.maxHeight = "90%";
+
+                    // Keeps it perfectly round
+                    pt.style.borderRadius = "50%";
+
+                    el.appendChild(pt);
                 } else {
-                    el.style.boxShadow = boxShadow
+                    el.style.boxShadow = boxShadow;
                 }
                 el.setAttribute("data-count", count);
                 el.setAttribute("tabindex", "0");
@@ -904,7 +924,7 @@ tabindex="0"
 onclick="jumpToStudyFromModal('${id}')"
 onkeydown="if(event.key === 'Enter' || event.key === ' '){ event.preventDefault(); jumpToStudyFromModal('${id}'); }"
 style="cursor: pointer; padding: 10px !important;"
-aria-label="Jump to study ${id}"><i class="ph ph-arrow-square-out"></i><div class="content"><div class="header">Study ${id}</div><div class="description">Press Enter to view in Data Tab</div></div></div>`).join("")}
+aria-label="Jump to study ${id}"><i class="ph ph-arrow-square-out"></i><div class="content"><div class="header">Study ${id}</div><div class="description">Click or press Enter to view in Data Tab</div></div></div>`).join("")}
     </div>`
                     }
                     document.querySelector("#spectrumDataLabel").innerHTML = `Studies under ${key}`;
@@ -952,7 +972,8 @@ function jumpToStudyFromModal(studyId) {
 }
 
 function changeSpectrumIntensity(e) {
-    displaySpectrum(e.target.value)
+    displaySpectrum(e.target.value);
+
 }
 
 function exportFilteredData() {
@@ -965,10 +986,10 @@ function exportFilteredData() {
         if (val) settings[id] = val
     });
     const plotVal = $('#plotFilter').dropdown('get value');
- 
+
     if (plotVal) settings.plotFilter = plotVal;
     const removedColsVal = $('#removeColumns').dropdown('get value');
- 
+
     if (removedColsVal) settings.removeColumns = removedColsVal;
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(filteredDataTmp), "Filtered Data");
@@ -1144,6 +1165,9 @@ function doInitialization() {
     container.addEventListener('mouseenter', openMenu);
     container.addEventListener('mouseleave', closeMenu);
     trigger.addEventListener('focus', openMenu);
+
+    document.getElementById('type1Intensity').value = 20;
+    document.getElementById('type2Intensity').value = 20;
     container.addEventListener('focusout', (e) => {
         if (!container.contains(e.relatedTarget)) {
             closeMenu()
@@ -1172,7 +1196,7 @@ function doInitialization() {
         onRemove: function (value, text, $removedItem) {
             updateFilterState(value, type, "remove");
             $(this).find('input.search').focus()
-          
+
         },
         onShow: function () {
             $(this).find('.menu').attr('aria-hidden', 'false');
@@ -1184,12 +1208,12 @@ function doInitialization() {
             // If the value is completely empty, the 'X' clear icon was clicked
             if (!value || value.trim() === "") {
                 // Directly wipe this specific filter category from global state
-              updateFilterState("", type, "nuke_all_filters");
-                
+                updateFilterState("", type, "nuke_all_filters");
+
                 // Return focus to the search input so keyboard users aren't lost
                 $(this).find('input.search').focus();
             }
-             
+
         },
         onHide: function () {
             $(this).find('.menu').attr('aria-hidden', 'true');

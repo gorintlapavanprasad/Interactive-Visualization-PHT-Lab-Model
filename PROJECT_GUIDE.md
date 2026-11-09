@@ -148,8 +148,7 @@ cross-checked independently against the raw data.
 
 ## 6. Still not working / known limitations
 
-1. **Not fully offline.** Fomantic UI CSS and Phosphor icons load from jsDelivr, and a checkmark
-   icon in `style.css` loads from raw.githubusercontent.com. Offline, the layout and icons break.
+1. ~~Not fully offline~~ (fixed: every file is served from this repo; section 12).
 2. ~~No data pipeline~~ (fixed: `tools/build-data.js`, section 10).
 3. ~~Grids without a scale~~ (fixed: viridis scale, legend, counts in cells). Still open: "Undisclosed"
    and "Not applicable" answers aren't shown, so rows don't add up to N.
@@ -189,7 +188,7 @@ infrastructure, **P3** = nice to have.
 | T6 | P1 | Chart controls: choose the stack-by variable, count or % view; hide the plot menu on grid tabs | — |
 | T7 | P1 | Data tab: sortable table view, page-size selector, column chooser | — |
 | T8 | P1 | Cross-tab heatmap: any two dimensions (e.g. Community × Study Method) to show research gaps | — |
-| T9 | P2 | Fully offline: vendor the Fomantic CSS, icon fonts and Phosphor; inline the checkmark SVG | Works with network off |
+| T9 | P2 | ✅ **Done** (section 12): no requests to other servers | Works with network off |
 | T10 | P2 | ✅ Automated part done (0 axe violations; reflow at 400% zoom; see section 8). Remaining: sessions with real screen-reader users, shorter tour | Signed off by disabled testers |
 | T11 | P2 | Tests: Playwright smoke tests for filter counts (Interview = 92, Interview OR Survey = 119, …) plus the audit in CI | CI green on every push |
 | T12 | P2 | Code health: split `script.js` into modules, ESLint, upgrade jQuery, generate grid rows from config | — |
@@ -356,3 +355,33 @@ Checked on 2026-11-09:
 - At the start, 16 options have no studies (e.g. chance-based play, Mail recruitment), and they are
   greyed out.
 - axe still reports 0 WCAG 2.2 AA violations.
+
+## 12. Self-contained: no outside servers
+
+The site loads **only files from this repository**. It used to load three things from other servers:
+
+| Was loaded from | Now |
+|---|---|
+| Fomantic UI 2.9.3 stylesheet (jsDelivr) | `assets/vendor/cdn-local/css/semantic.min.css` (byte-identical copy), plus its Lato and icon fonts in `…/css/themes/default/assets/fonts/` |
+| Phosphor Icons 2.1.1 (jsDelivr) | `assets/vendor/phosphor-icons-2.1.1/regular/` (CSS + font) |
+| Checkmark icon (raw.githubusercontent.com) | `media/check-bold.svg` |
+
+Why it matters:
+- The site works on a laptop with no internet access, e.g. at a conference or in a classroom.
+- It keeps working if a CDN is down or blocked, such as on university or hospital networks.
+- Visitors' browsers no longer contact third-party servers, which is better for privacy.
+- Chart downloads (PNG/JPEG/SVG) are generated in the browser; Highcharts' export server isn't used.
+
+Checked on 2026-11-09 by loading the site in headless Chrome with every request to another host
+blocked and then using filters, menus and all four tabs:
+- 0 outside requests attempted and 0 failed requests.
+- Lato, the Fomantic icons and the Phosphor icons all loaded, and the page looked identical.
+- axe still reports 0 WCAG 2.2 AA violations.
+
+Licences: Fomantic UI and Phosphor Icons are MIT (their licence files are kept next to the files),
+and Lato is SIL Open Font License. Highcharts needs a licence for non-academic/commercial use.
+
+Not loaded by the page but still in the repo (cleanup is task T13):
+- `assets/vendor/cdn-downloads/` (duplicate)
+- `assets/vendor/mobiscroll/` (unused trial build)
+- Plotly, Chart.js and Bootstrap in `assets/vendor/cdn-local/js/`

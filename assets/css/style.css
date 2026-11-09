@@ -518,8 +518,8 @@ h3 {
     background-color: var(--ds-accent-primary) !important; 
     
     /* ✂️ The mask cuts out the shape of the Phosphor checkmark */
-   -webkit-mask: url('https://raw.githubusercontent.com/phosphor-icons/core/main/assets/bold/check-bold.svg') no-repeat center / contain;
-    mask: url('https://raw.githubusercontent.com/phosphor-icons/core/main/assets/bold/check-bold.svg') no-repeat center / contain;
+   -webkit-mask: url('../../media/check-bold.svg') no-repeat center / contain;
+    mask: url('../../media/check-bold.svg') no-repeat center / contain;
 }
 
 .ui.dropdown .menu>.header {

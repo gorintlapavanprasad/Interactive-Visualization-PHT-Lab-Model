@@ -1,0 +1,13 @@
+{
+  "name": "pht-lab-tools",
+  "private": true,
+  "description": "Data audit and accessibility test tools for the PHT Lab dashboard",
+  "scripts": {
+    "audit": "node audit-data.js",
+    "test:a11y": "node a11y-persona-test.js http://127.0.0.1:8765/ latest"
+  },
+  "devDependencies": {
+    "axe-core": "^4.14.0",
+    "puppeteer-core": "^23.0.0"
+  }
+}

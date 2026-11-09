@@ -14,7 +14,6 @@
 
 
   <!-- <link rel="stylesheet" href="assets/css/pagination.css" /> -->
-  <link href="assets/vendor/mobiscroll/mobiscroll.min.css" rel="stylesheet" />
   <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/fomantic-ui@2.9.3/dist/semantic.min.css" />
   <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/regular/style.css" />
   <link rel="stylesheet" href="assets/vendor/cdn-local/css/shepherd.css" />
@@ -33,13 +32,6 @@
 
 <body>
   <a href="#main-content" class="  skip-link">Skip to Charts</a>
-<div id="desktop-shield">
-    <div class="shield-content">
-        <img src="media/undraw_dashboard_p93p.svg" alt="Desktop Only" class="shield-svg">
-        <h1>Optimal on Desktop</h1>
-        <p>This analytics dashboard is optimized for large screens to ensure data precision. Please switch to a device with a width of 1024px or more.</p>
-    </div>
-</div>
   <div class="ui modal tiny" id="spectrumData" role="dialog" aria-modal="true" aria-labelledby="spectrumDataLabel">
     <button class="ui icon   close close-modal-btn" aria-label="Close modal">
       <i class="icon close" aria-hidden="true"></i>
@@ -73,7 +65,7 @@
 
     <div class="flexContainer">
 
-      <div class="sidebar-filters">
+      <div class="sidebar-filters" role="region" aria-label="Filters and record counts">
         <div class="sidebar-row-1 ui basic segment">
           <div class="logo-text-group">
             <!-- <img src="media/chart-icon.png" alt="" aria-hidden="true" class="appLogo" /> -->
@@ -84,7 +76,7 @@
               </button>
             </div>
           </div>
-          <h3 class="filter-heading">Apply Filters</h3>
+          <h2 class="filter-heading">Apply Filters</h2>
         </div>
 
         <div class="sidebar-row-2 ui segment">
@@ -93,9 +85,9 @@
             <i class="circle info icon"></i>
           </div>
           <div class="filter-section-static" id="general-info-section">
-            <h4 class="filterHeader ui top header" tabindex="0">
+            <h3 class="filterHeader ui top header">
               General Information
-            </h4>
+            </h3>
 
             <div class="filter-content-wrapper">
               <div class="position-relative">
@@ -113,17 +105,16 @@
     <div class="ui fluid input">
       <input type="text" id="authorFilter" 
              placeholder="Enter the author details"
-             pattern="^[a-zA-Z ]+([,;][a-zA-Z ]+)*" 
-             title="Please enter author name (e.g., Smith, Doe)" />
+             title="One or more author names, separated by commas" />
     </div>
   </div>
 
   <div class="ui field question">
     <label for="YearFilter">Year (e.g., 2000-2010, 2000):</label>
     <div class="ui fluid input">
-      <input type="text" id="YearFilter" 
+      <input type="text" id="YearFilter" aria-describedby="YearFilter-error" 
              placeholder="Enter the year range or value"
-             pattern="^(\d{4}-\d{4}|\d{4})" 
+             pattern="\s*(\d{4}\s*-\s*\d{4}|\d{4})\s*" 
              title="Enter a 4-digit year (2020) or a range (2010-2020)" />
     </div>
   </div>
@@ -131,9 +122,9 @@
   <div class="ui field question">
     <label for="PagesFilter">Pages: (e.g., 0-200, 10)</label>
     <div class="ui fluid input">
-      <input type="text" id="PagesFilter" 
+      <input type="text" id="PagesFilter" aria-describedby="PagesFilter-error" 
              placeholder="Enter the page range or value"
-             pattern="^(\d+|\d+-\d+)" 
+             pattern="\s*(\d+\s*-\s*\d+|\d+)\s*" 
              title="Enter a number or a numeric range (e.g., 10-50)" />
     </div>
   </div>
@@ -152,7 +143,7 @@
 
 
           <div class="ui attached segment">
-            <h4 class="filterHeader ui top header" tabindex="0">PHT Lab Framework</h4>
+            <h3 class="filterHeader ui top header">PHT Lab Framework</h3>
             <div class="ui search fluid multiple selection dropdown firstDropdown"  
               >
               <input name="tags" type="hidden">
@@ -293,7 +284,7 @@
           </div>
 
           <div class="ui attached segment">
-            <h4 class="filterHeader ui top header" tabindex="0">Characteristics of Included Studies</h4>
+            <h3 class="filterHeader ui top header">Characteristics of Included Studies</h3>
             <div class="ui fluid multiple search selection dropdown secondDropdown"  
              >
               <input name="tags" type="hidden">
@@ -412,7 +403,7 @@
           </div>
 
           <div class="ui attached segment">
-            <h4 class="filterHeader ui top header" tabindex="0">Participants</h4>
+            <h3 class="filterHeader ui top header">Participants</h3>
             <div class="ui fluid multiple search selection dropdown thirdDropdown"  
            >
               <input name="tags" type="hidden">
@@ -527,8 +518,8 @@
         <div class="sidebar-row-3 ui basic segment">
           <!-- <div class="ui divider"></div> -->
 
-          <div class="records" aria-live="polite" aria-atomic="true">
-            <h3 class="recordsStatus ui aligned header">Records</h3>
+          <div class="records">
+            <h2 class="recordsStatus ui aligned header">Records</h2>
             <div class="ui two column centered grid" role="presentation">
 
               <div class="column center aligned" role="group" aria-label="Filtered Count">
@@ -609,12 +600,7 @@
               aria-hidden="false">
             
 
-                  <div class="ui search fluid   selection dropdown"   id="plotFilter"
- 
- 
-    
-     aria-expanded="false"
-    >
+                  <div class="ui search fluid selection dropdown" id="plotFilter">
      
     <input name="tags" type="hidden">
     <i class="dropdown icon"></i>
@@ -624,15 +610,10 @@
 
 
             </div>
-            <div class="plotFilterMultiSelect"   aria-hidden="true">
+            <div class="plotFilterMultiSelect" aria-hidden="true" inert>
 
                
-               <div class="ui search fluid multiple selection dropdown" 
-     role="combobox" 
-     id="removeColumns"
-     aria-label="Select PHT Lab Framework tags"
-     aria-expanded="false"
-     aria-haspopup="listbox">
+               <div class="ui search fluid multiple selection dropdown" id="removeColumns">
      
     <input name="tags" type="hidden">
     <i class="dropdown icon"></i>
@@ -671,7 +652,7 @@
 
                 <div class="hover-nav-item" role="none" id="theme-toggle-container">
                   <label class="switch">
-                    <input type="checkbox" id="theme" onchange="toggleTheme('theme')" tabindex="0" role="switch">
+                    <input type="checkbox" id="theme" onchange="toggleTheme('theme')" role="switch" aria-labelledby="theme-text">
                     <span class="slider"></span>
                   </label>
                   <span class="theme-label" id="theme-text">Light Mode</span>
@@ -713,10 +694,10 @@
             <div class="ui tab" id="table-panel" data-tab="Show-plot/table" role="tabpanel" tabindex="0" hidden
               aria-labelledby="sr-plot-table-title">
 
-              <div id="plotDataTableContainer">
+              <div id="plotDataTableContainer" tabindex="0" role="region" aria-labelledby="sr-plot-table-title">
                 <h3 id="sr-plot-table-title" class="ui header">Tabular Data View: Categorical Breakdowns</h3>
 
-                <table id="plotDataTable" class="ui celled striped table" role="grid">
+                <table id="plotDataTable" class="ui celled striped table" aria-labelledby="sr-plot-table-title">
                   <thead>
                     <tr id="sr-table-header-row"></tr>
                   </thead>
@@ -752,16 +733,16 @@
                   <div class="innerCol col-60">
                     <table class="spectrumTable type-1">
                       <tr class="ratings">
-                        <th> </th>
-                        <td>Totally </td>
-                        <td>Mostly</td>
-                        <td>Both</td>
-                        <td>Mostly</td>
-                        <td>Totally</td>
-                        <th> </th>
+                        <td></td>
+                        <th scope="col">Totally</th>
+                        <th scope="col">Mostly</th>
+                        <th scope="col">Both</th>
+                        <th scope="col">Mostly</th>
+                        <th scope="col">Totally</th>
+                        <td></td>
                       </tr>
                       <tr data-row="Fun-First vs. Utility-First (Initial Design Intention)">
-                        <th>Fun-First</th>
+                        <th scope="row">Fun-First</th>
                         <td data-column="Totally fun first"></td>
                         <td data-column="Mostly fun first"></td>
                         <td data-column="Both fun and utility first"></td>
@@ -770,25 +751,25 @@
                         <th>Utility-First</th>
                       </tr>
                       <tr data-row='Play vs. Game'>
-                        <th>Game</th>
+                        <th scope="row">Play</th>
                         <td data-column="Unstructured play"></td>
                         <td data-column="Semi-structured play"></td>
                         <td data-column="Flexible structure with rules"></td>
                         <td data-column="Flexible game"></td>
                         <td data-column="Game with rigid rules"></td>
-                        <th>Play</th>
+                        <th>Game</th>
                       </tr>
                       <tr data-row='Social vs. Solo'>
-                        <th>Social</th>
+                        <th scope="row">Solo</th>
                         <td data-column="Entirely Solo"></td>
                         <td data-column="Mostly Solo, but can play against AI"></td>
                         <td data-column="Mix of solo and social affordances"></td>
                         <td data-column="Mostly social, but aspects are independent"></td>
                         <td data-column="Entirely social"></td>
-                        <th>Solo</th>
+                        <th>Social</th>
                       </tr>
                       <tr data-row='Competitive vs. Collaborative'>
-                        <th>Competitive</th>
+                        <th scope="row">Competitive</th>
                         <td data-column="Entirely Competitive"></td>
                         <td data-column="Mostly Competitive, but sometimes collaboration is important"></td>
                         <td data-column="Mix of competitive and collaborative"></td>
@@ -797,7 +778,7 @@
                         <th>Collaborative</th>
                       </tr>
                       <tr data-row='Skill vs. Chance'>
-                        <th>Skill</th>
+                        <th scope="row">Skill</th>
                         <td data-column="Entirely skill-based"></td>
                         <td data-column="Mostly skill-based"></td>
                         <td data-column="Equally skill and chance based"></td>
@@ -806,25 +787,25 @@
                         <th>Chance</th>
                       </tr>
                       <tr data-row='Symmetrical vs. Asymmetrical'>
-                        <th>Symmetrical</th>
+                        <th scope="row">Symmetrical</th>
                         <td data-column="Entirely Symmetrical"></td>
                         <td data-column="Mostly Symmetrical"></td>
-                        <td data-column="Both Symetrical and Asymetrical"></td>
+                        <td data-column="Both Symmetrical and Asymmetrical"></td>
                         <td data-column="Mostly Asymmetrical"></td>
-                        <td data-column="Entirely Asymetrical"></td>
+                        <td data-column="Entirely Asymmetrical"></td>
                         <th>Asymmetrical</th>
                       </tr>
                       <tr data-row='Sequential vs. Simultaneous'>
-                        <th>Sequential</th>
+                        <th scope="row">Sequential</th>
                         <td data-column="Entirely Turn-based"></td>
                         <td data-column="Follows a set of steps"></td>
                         <td data-column="Turns are taken, but some actions can be taken at anytime"></td>
-                        <td data-column="Most actions can be taken at any time but there are some phases"></td>
+                        <td data-column="Most actions can be taken at any time, but there are some phases"></td>
                         <td data-column="Entirely Simultaneous"></td>
                         <th>Simultaneous</th>
                       </tr>
                       <tr data-row='Synchronous vs. Asynchronous'>
-                        <th>Synchronous</th>
+                        <th scope="row">Synchronous</th>
                         <td data-column="Entirely Synchronous"></td>
                         <td data-column="Mostly Synchronous with few asynchronous affordances"></td>
                         <td data-column="Equal mix of synchronous and asynchronous affordances"></td>
@@ -847,7 +828,7 @@
 
           <div class="ui tab" data-tab="Show-grid" id="Show-grid-pane" role="tabpanel" tabindex="0"
             aria-labelledby="sr-spectrum-title">
-            <h2 id="sr-spectrum-title" class="sr-only">Heatmap Frequency: Intensity of Categorial Ratings across Study
+            <h2 id="sr-spectrum-title" class="sr-only">Heatmap Frequency: Intensity of Categorical Ratings across Study
               Dimensions</h2>
             <div class="spectrum-error"></div>
             <div class="d-flex flex-wrap spectrumRow">
@@ -858,22 +839,22 @@
                   <i class="circle info icon"></i>
                 </div>
 
-                <h3 class="">Frequency of ratings along each categorial spectrum</h3>
+                <h3 class="">Frequency of ratings along each categorical spectrum</h3>
 
                 <div class="flexRow flex-grow-1">
                   <div class="innerCol col-60">
                     <table class="spectrumTable type-2">
                       <tr class="ratings">
-                        <th> </th>
-                        <td>Totally </td>
-                        <td>Mostly</td>
-                        <td>Both</td>
-                        <td>Mostly</td>
-                        <td>Totally</td>
-                        <th> </th>
+                        <td></td>
+                        <th scope="col">Totally</th>
+                        <th scope="col">Mostly</th>
+                        <th scope="col">Both</th>
+                        <th scope="col">Mostly</th>
+                        <th scope="col">Totally</th>
+                        <td></td>
                       </tr>
                       <tr data-row="Fun-First vs. Utility-First (Initial Design Intention)">
-                        <th>Fun-First</th>
+                        <th scope="row">Fun-First</th>
                         <td data-column="Totally fun first"></td>
                         <td data-column="Mostly fun first"></td>
                         <td data-column="Both fun and utility first"></td>
@@ -882,25 +863,25 @@
                         <th>Utility-First</th>
                       </tr>
                       <tr data-row='Play vs. Game'>
-                        <th>Game</th>
+                        <th scope="row">Play</th>
                         <td data-column="Unstructured play"></td>
                         <td data-column="Semi-structured play"></td>
                         <td data-column="Flexible structure with rules"></td>
                         <td data-column="Flexible game"></td>
                         <td data-column="Game with rigid rules"></td>
-                        <th>Play</th>
+                        <th>Game</th>
                       </tr>
                       <tr data-row='Social vs. Solo'>
-                        <th>Social</th>
+                        <th scope="row">Solo</th>
                         <td data-column="Entirely Solo"></td>
                         <td data-column="Mostly Solo, but can play against AI"></td>
                         <td data-column="Mix of solo and social affordances"></td>
                         <td data-column="Mostly social, but aspects are independent"></td>
                         <td data-column="Entirely social"></td>
-                        <th>Solo</th>
+                        <th>Social</th>
                       </tr>
                       <tr data-row='Competitive vs. Collaborative'>
-                        <th>Competitive</th>
+                        <th scope="row">Competitive</th>
                         <td data-column="Entirely Competitive"></td>
                         <td data-column="Mostly Competitive, but sometimes collaboration is important"></td>
                         <td data-column="Mix of competitive and collaborative"></td>
@@ -909,7 +890,7 @@
                         <th>Collaborative</th>
                       </tr>
                       <tr data-row='Skill vs. Chance'>
-                        <th>Skill</th>
+                        <th scope="row">Skill</th>
                         <td data-column="Entirely skill-based"></td>
                         <td data-column="Mostly skill-based"></td>
                         <td data-column="Equally skill and chance based"></td>
@@ -918,25 +899,25 @@
                         <th>Chance</th>
                       </tr>
                       <tr data-row='Symmetrical vs. Asymmetrical'>
-                        <th>Symmetrical</th>
+                        <th scope="row">Symmetrical</th>
                         <td data-column="Entirely Symmetrical"></td>
                         <td data-column="Mostly Symmetrical"></td>
-                        <td data-column="Both Symetrical and Asymetrical"></td>
+                        <td data-column="Both Symmetrical and Asymmetrical"></td>
                         <td data-column="Mostly Asymmetrical"></td>
-                        <td data-column="Entirely Asymetrical"></td>
+                        <td data-column="Entirely Asymmetrical"></td>
                         <th>Asymmetrical</th>
                       </tr>
                       <tr data-row='Sequential vs. Simultaneous'>
-                        <th>Sequential</th>
+                        <th scope="row">Sequential</th>
                         <td data-column="Entirely Turn-based"></td>
                         <td data-column="Follows a set of steps"></td>
                         <td data-column="Turns are taken, but some actions can be taken at anytime"></td>
-                        <td data-column="Most actions can be taken at any time but there are some phases"></td>
+                        <td data-column="Most actions can be taken at any time, but there are some phases"></td>
                         <td data-column="Entirely Simultaneous"></td>
                         <th>Simultaneous</th>
                       </tr>
                       <tr data-row='Synchronous vs. Asynchronous'>
-                        <th>Synchronous</th>
+                        <th scope="row">Synchronous</th>
                         <td data-column="Entirely Synchronous"></td>
                         <td data-column="Mostly Synchronous with few asynchronous affordances"></td>
                         <td data-column="Equal mix of synchronous and asynchronous affordances"></td>
@@ -968,7 +949,6 @@
 
   <script src="assets/js/pagination.js"></script>
   <!-- <script src="https://cdn.plot.ly/plotly-2.31.1.min.js"></script> -->
-  <script src="assets/vendor/mobiscroll/mobiscroll.min.js"></script>
 
   <script src="assets/vendor/cdn-local/js/shepherd.min.js"></script>
   <!-- <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> -->

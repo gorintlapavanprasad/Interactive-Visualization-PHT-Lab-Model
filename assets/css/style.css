@@ -24,7 +24,8 @@
     --ds-chart-gold: #ca8a04;
     --ds-chart-orange: #ea580c;
     --ds-chart-red: #e11d48;
-    --ds-chart-slate: #475569
+    --ds-chart-slate: #475569;
+    --ds-chart-purple: #7c3aed
 }
 
 [data-theme="dark"] {
@@ -47,7 +48,8 @@
     --ds-chart-gold: #facc15;
     --ds-chart-orange: #fb923c;
     --ds-chart-red: #fb7185;
-    --ds-chart-slate: #94a3b8
+    --ds-chart-slate: #94a3b8;
+    --ds-chart-purple: #a78bfa
 }
 
 html,
@@ -121,15 +123,15 @@ h5 {
     margin: 0
 }
 
-h3.filter-heading,
-h3.recordsStatus {
+h2.filter-heading,
+h2.recordsStatus {
     font-size: 1.125rem;
     font-weight: 600;
     margin-bottom: 1.25rem;
     color: var(--ds-text-primary)
 }
 
-h4.filterHeader {
+.filterHeader {
     font-size: .75rem;
     font-weight: 700;
     text-transform: uppercase;
@@ -1075,11 +1077,10 @@ button {
     transition: all 0.6s cubic-bezier(.175, .885, .32, 1.275)
 }
 
+/* Filtered-out cards must leave the layout AND the accessibility tree:
+   opacity:0 alone left them keyboard-focusable and announced by screen readers. */
 .secondUI .divOuter.divOuterHidden {
-    opacity: 0;
-    position: absolute;
-    z-index: -1;
-    pointer-events: none
+    display: none !important
 }
 
 .secondUI .divOuter.divOuterVisible {
@@ -2820,6 +2821,61 @@ ul li {
     transition: all 0.3s cubic-bezier(.175, .885, .32, 1.275)
 }
 
+/* --- Viridis grids: visible counts, legend, shared tooltip ------------------ */
+.spectrumTable.type-2 td[data-column] {
+    text-align: center;
+    vertical-align: middle;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums
+}
+
+.spectrumTable td[data-column]:focus-visible {
+    outline: 3px solid var(--ds-focus-ring, #2563eb);
+    outline-offset: -3px
+}
+
+.viridis-legend {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    font-size: 12px;
+    color: var(--ds-text-secondary)
+}
+
+.viridis-legend-bar {
+    flex: 0 1 220px;
+    height: 12px;
+    border-radius: 3px;
+    border: 1px solid var(--ds-border-subtle)
+}
+
+.grid-tooltip {
+    position: absolute;
+    z-index: 10000;
+    max-width: 280px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    background: var(--ds-text-primary, #0f172a);
+    color: var(--ds-bg-panel, #ffffff);
+    font-size: 13px;
+    line-height: 1.4;
+    pointer-events: none;
+    box-shadow: 0 4px 12px rgb(0 0 0 / .25)
+}
+
+.grid-tooltip[hidden] {
+    display: none
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important
+    }
+}
+
 .type-1 td::before {
     content: "";
     width: 100%;
@@ -2999,4 +3055,78 @@ ul li {
         display: flex;
         justify-content: space-between
     }
+}
+
+
+/* ===========================================================================
+   Low vision: reflow instead of a "desktop only" wall (WCAG 1.4.4 / 1.4.10).
+   At 200% zoom a 1440px screen is only 720 CSS px wide; the old shield hid the
+   whole app. Below 1024px the sidebar now stacks above the content.
+   =========================================================================== */
+@media screen and (max-width:1023px) {
+    .flexContainer {
+        flex-direction: column;
+        height: auto
+    }
+
+    .sidebar-filters {
+        position: static !important;
+        width: 100% !important;
+        height: auto !important;
+        transform: none !important;
+        opacity: 1 !important;
+        border-right: none;
+        border-bottom: 1px solid var(--ds-border-subtle)
+    }
+
+    .box {
+        width: 100% !important;
+        min-height: 80vh
+    }
+
+    .ui.button.close-sidebar {
+        display: none !important
+    }
+
+    .page-header>div.switchContainer {
+        display: flex !important
+    }
+
+    .spectrumContainer,
+    #plotDataTableContainer {
+        overflow-x: auto
+    }
+
+    .spectrumTable tr th,
+    .col-30 p {
+        font-size: .75rem !important
+    }
+}
+
+/* Inline validation messages for the text filters */
+.field-error {
+    color: #b91c1c;
+    font-size: .85rem;
+    margin-top: 4px
+}
+
+.field-error:empty {
+    display: none
+}
+
+[data-theme="dark"] .field-error {
+    color: #fca5a5
+}
+
+/* Keyboard focus on the scrollable data table region */
+#plotDataTableContainer:focus-visible {
+    outline: 3px solid var(--ds-focus-ring, #2563eb);
+    outline-offset: 2px
+}
+
+/* Empty corner cells of the grid header row */
+.spectrumTable tr.ratings td:empty {
+    border: none !important;
+    background: transparent !important;
+    cursor: default
 }

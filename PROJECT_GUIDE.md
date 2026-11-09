@@ -41,16 +41,17 @@ cd PHT-Lab
 npx http-server -p 8765 -c-1
 ```
 
-Then open http://127.0.0.1:8765/. The UI requires a window at least **1024 px** wide. Below that, a
-"desktop only" screen is shown.
+Then open http://127.0.0.1:8765/. Any window width works; below 1024 px the filters stack above the
+charts.
 
-Check the data after any data change:
+To update the data from a new Covidence export, see section 10. In short:
 
 ```bash
-node tools/audit-data.js
+node tools/build-data.js data/raw/<covidence-export>.csv
 ```
 
-The script exits with code 1 if anything would make the dashboard miscount.
+That command also runs the audit. You can run the audit on its own with `node tools/audit-data.js`;
+it exits with code 1 if anything would make the dashboard miscount.
 
 ## 3. Architecture
 
@@ -149,8 +150,7 @@ cross-checked independently against the raw data.
 
 1. **Not fully offline.** Fomantic UI CSS and Phosphor icons load from jsDelivr, and a checkmark
    icon in `style.css` loads from raw.githubusercontent.com. Offline, the layout and icons break.
-2. **No data pipeline.** `data.js` was built by hand from the Covidence CSV, and the raw CSVs
-   include per-reviewer rows plus "Consensus" rows. Re-importing a new export is manual and error-prone.
+2. ~~No data pipeline~~ (fixed: `tools/build-data.js`, section 10).
 3. ~~Grids without a scale~~ (fixed: viridis scale, legend, counts in cells). Still open: "Undisclosed"
    and "Not applicable" answers aren't shown, so rows don't add up to N.
 4. ~~Plot dropdown visible on grid tabs~~ (fixed).
@@ -182,8 +182,8 @@ infrastructure, **P3** = nice to have.
 | ID | Pri | Task | Done when |
 |---|---|---|---|
 | T1 | P0 | Push these fixes to the real GitHub repo (needs repo access) as a reviewed PR | PR merged |
-| T2 | P0 | **Data pipeline:** `tools/build-data.js` turns a Covidence CSV into `data.js`. It keeps Consensus rows, normalises spelling, makes Study IDs unique and runs the audit | One command regenerates `data.js`; audit passes |
-| T3 | P0 | Fix source typos and duplicate IDs in the Covidence template | Audit shows no spelling variants |
+| T2 | P0 | ✅ **Done.** `tools/build-data.js` (section 10) | One command regenerates `data.js`; audit passes |
+| T3 | P0 | Partly done: the pipeline now fixes answer spellings, DOIs and duplicate IDs automatically. Remaining: fix the column-name typos in the Covidence template (`Casegivers`, `Motor of physical impairment`, `Brainstormming`, `Convienience`) | Template typos gone |
 | T4 | P1 | Show live counts beside every filter option; grey out zero-count options | Counts update with filters |
 | T5 | P1 | ✅ Mostly done (viridis scale, legend, counts in cells). Remaining: a per-row "N/A / undisclosed" column | Rows sum to N |
 | T6 | P1 | Chart controls: choose the stack-by variable, count or % view; hide the plot menu on grid tabs | — |
@@ -284,3 +284,52 @@ in the study cards. The search combines with all other filters, and it is saved 
   `https://doi.org/<DOI>` in a new tab, which redirects to the paper's page in the ACM Digital Library.
 - All 215 DOIs were checked against doi.org, and all 215 resolve. One study (Abreu 2020) has no DOI.
 - `tools/audit-data.js` now flags unusable or messy DOIs.
+
+## 10. Updating the data (pipeline)
+
+`assets/js/data.js` is **generated**; don't edit it by hand. To publish new or changed studies:
+
+1. In Covidence (review #430680), export the **extraction** data as CSV.
+2. Save it in `data/raw/`. That folder is git-ignored, because the raw export contains each
+   reviewer's individual coding and names. Only the Consensus rows are published.
+3. Preview the changes without writing anything:
+   ```bash
+   node tools/build-data.js data/raw/<export>.csv --dry-run
+   ```
+   It reports how many studies were added, removed or changed compared with the live data, which
+   fields changed, and any studies that have reviewer rows but **no Consensus row yet**. Those
+   studies won't appear on the site until consensus is reached.
+4. Build it for real. This writes `assets/js/data.js` and runs `tools/audit-data.js`:
+   ```bash
+   node tools/build-data.js data/raw/<export>.csv
+   ```
+5. Check the site locally, then commit `assets/js/data.js` and push. GitHub Pages updates in about a minute.
+
+What the pipeline does:
+- Keeps only Consensus rows.
+- Drops `Covidence #`, `Reviewer Name` and the duplicate `Title` column.
+- Trims values and collapses repeated spaces.
+- Turns numeric cells into numbers.
+- Reduces DOIs to `10.xxxx/…`.
+- Fixes known answer misspellings: Symetrical, Asymetrical, asychronous, asycnronous, asynchrounous, Unkown.
+- Renames duplicate Study IDs to `Author Yeara/b`.
+
+It stops with an error, writing nothing, if:
+- a column the dashboard needs is missing (e.g. the extraction template was changed),
+- rows are malformed or have the wrong number of cells,
+- a study has two Consensus rows,
+- a DOI is unusable,
+- a year is implausible,
+- the file isn't UTF-8.
+
+**Checked on 2026-11-09** with `review_430680_20240910090236.csv`:
+- Same 216 studies as before.
+- All 190 filter options give identical counts on the old and new data.
+- Searches, grid values and DOI links are unchanged.
+- Rebuilding from the same export changes nothing.
+
+Data corrections it made:
+- 16 DOIs cleaned, including the corrupted Alsaleem 2019 DOI.
+- 229 misspelled answers fixed.
+- Torrente 2012, Zhang 2023, Li 2022 and Ostiz-Blanco 2018 became `a`/`b`.
+- One title that the hand-made file had truncated was restored ("If you've gone straight, now, you must turn left" …).

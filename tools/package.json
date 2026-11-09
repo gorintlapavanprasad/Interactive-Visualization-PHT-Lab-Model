@@ -3,6 +3,8 @@
   "private": true,
   "description": "Data audit and accessibility test tools for the PHT Lab dashboard",
   "scripts": {
+    "build-data": "node build-data.js",
+    "build-data:check": "node build-data.js --dry-run",
     "audit": "node audit-data.js",
     "test:a11y": "node a11y-persona-test.js http://127.0.0.1:8765/ latest"
   },

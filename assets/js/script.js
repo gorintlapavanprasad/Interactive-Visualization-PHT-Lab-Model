@@ -6,7 +6,7 @@ const FILTER_SPECS = {
             "fun_utility_both": "Both fun and utility first (i.e., Design workshop with diverse stakeholders)",
             "utility_mostly": "Mostly utility first (i.e., primary utilitarian mechanic designed first)",
             "utility_totally": "Totally utility first (i.e., made by clinicians, fun incorporated later)",
-            "fun_utility_undisclosed": "Undisclosed/Unkown, but the paper does include a game/play system or experience",
+            "fun_utility_undisclosed": "Undisclosed/Unknown, but the paper does include a game/play system or experience",
             "fun_utility_na": "Not Applicable"
         },
         "Play vs. Game": {
@@ -15,7 +15,7 @@ const FILTER_SPECS = {
             "play_flexible_rules": "Flexible structure with rules (i.e., improv)",
             "game_flexible": "Flexible game (i.e., board game with house rules)",
             "game_rigid": "Game with rigid rules (i.e., video game)",
-            "play_game_undisclosed": "Undisclosed/Unkown, but the paper does include a game/play system or experience",
+            "play_game_undisclosed": "Undisclosed/Unknown, but the paper does include a game/play system or experience",
             "play_game_na": "Not Applicable"
         },
         "Skill vs. Chance": {
@@ -24,7 +24,7 @@ const FILTER_SPECS = {
             "skill_chance_equal": "Equally skill and chance based (i.e., Catan)",
             "chance_mostly": "Mostly chance-based (i.e., Uno)",
             "chance_entirely": "Entirely chance-based (i.e., all dice)",
-            "skill_chance_undisclosed": "Undisclosed/Unkown, but the paper does include a game/play system or experience",
+            "skill_chance_undisclosed": "Undisclosed/Unknown, but the paper does include a game/play system or experience",
             "skill_chance_na": "Not Applicable"
         },
         "Social vs. Solo": {
@@ -33,7 +33,7 @@ const FILTER_SPECS = {
             "solo_social_mixed": "Mix of solo and social affordances (i.e., Animal Crossing)",
             "social_mostly": "Mostly social, but aspects are independent (i.e., House on Hill haunt transition)",
             "social_entirely": "Entirely social (i.e., Tag)",
-            "social_solo_undisclosed": "Undisclosed/Unkown, but the paper does include a game/play system or experience",
+            "social_solo_undisclosed": "Undisclosed/Unknown, but the paper does include a game/play system or experience",
             "social_solo_na": "Not Applicable"
         },
         "Sequential vs. Simultaneous": {
@@ -42,7 +42,7 @@ const FILTER_SPECS = {
             "turn_plus_anytime": "Turns are taken, but some actions can be taken at anytime (i.e., Pandemic)",
             "mostly_simultaneous": "Most actions can be taken at any time, but there are some phases (i.e., PvP death reset timer)",
             "simultaneous_entirely": "Entirely Simultaneous (i.e., race)",
-            "seq_sim_undisclosed": "Undisclosed/Unkown, but the paper does include a game/play system or experience",
+            "seq_sim_undisclosed": "Undisclosed/Unknown, but the paper does include a game/play system or experience",
             "seq_sim_na": "Not Applicable"
         },
         "Synchronous vs. Asynchronous": {
@@ -60,15 +60,15 @@ const FILTER_SPECS = {
             "competitive_collab_mixed": "Mix of competitive and collaborative (i.e., Mario party 2 vs 2 mini games)",
             "collaborative_mostly": "Mostly Collaborative (i.e., Animal Crossing)",
             "collaborative_entirely": "Entirely Collaborative (i.e., Pandemic)",
-            "comp_collab_undisclosed": "Undisclosed/Unkown, but the paper does include a game/play system or experience",
+            "comp_collab_undisclosed": "Undisclosed/Unknown, but the paper does include a game/play system or experience",
             "comp_collab_na": "Not Applicable"
         },
         "Symmetrical vs. Asymmetrical": {
-            "symmetrical_entirely": "Entirely Symetrical (i.e., Tik tac toe)",
-            "symmetrical_mostly": "Mostly Symetrical (i.e., Uno)",
-            "symmetrical_asym_mixed": "Both Symetrical and Asymetrical (i.e., Pandemic—similar turn structure with different character abilities)",
-            "asymmetrical_mostly": "Mostly Asymetrical (i.e., Tag)",
-            "asymmetrical_entirely": "Entirely Asymetrical (i.e., Keep talking nobody explodes)",
+            "symmetrical_entirely": "Entirely Symmetrical (i.e., Tik tac toe)",
+            "symmetrical_mostly": "Mostly Symmetrical (i.e., Uno)",
+            "symmetrical_asym_mixed": "Both Symmetrical and Asymmetrical (i.e., Pandemic—similar turn structure with different character abilities)",
+            "asymmetrical_mostly": "Mostly Asymmetrical (i.e., Tag)",
+            "asymmetrical_entirely": "Entirely Asymmetrical (i.e., Keep talking nobody explodes)",
             "sym_asym_undisclosed": "Undisclosed/Unknown, but the paper does include a game/play system or experience",
             "sym_asym_na": "Not Applicable"
         },
@@ -77,7 +77,7 @@ const FILTER_SPECS = {
             "play_fantasy": "Fantasy (i.e., role playing)",
             "play_construction": "Construction (i.e., Music, painting, building)",
             "play_challenge": "Challenge (Testing physical or mental abilities against others or self)",
-            "play_value_undisclosed": "Undisclosed/Unkown, but the paper does include a game/play system or experience",
+            "play_value_undisclosed": "Undisclosed/Unknown, but the paper does include a game/play system or experience",
             "play_value_na": "Not Applicable"
         }
     },

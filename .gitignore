@@ -1,0 +1,4 @@
+# Raw Covidence exports contain individual reviewers' rows and names;
+# only the generated assets/js/data.js (Consensus rows) is published.
+data/raw/
+node_modules/

@@ -608,9 +608,11 @@ function applyFilters(args) {
         }
         allFilters = {};
         filteredDataTmp = csvData;
+        currentSearch = null;
         categoryWiseTemp = {};
         applyColumnFilter([]);
         renderTable(filteredDataTmp);
+        updateFilterCounts(csvData, {});
         announceResults();
         return
     }
@@ -634,6 +636,11 @@ function applyFilters(args) {
     const parsed = searchRaw ? parseSearchQuery(searchRaw) : null;
     currentSearch = parsed && (parsed.groups.length || parsed.negatives.length) ? parsed : null;
     const scores = new Map();
+    // For the option counts: per active column, the studies that pass every
+    // OTHER filter (so a group's own selections don't shrink its own counts).
+    const activeCols = Object.keys(activeCriteria);
+    const facetBase = {};
+    activeCols.forEach(c => facetBase[c] = []);
     let filteredData = csvData.filter(item => {
         if (currentSearch) {
             const sc = searchScore(item, currentSearch);
@@ -652,7 +659,11 @@ function applyFilters(args) {
         // AND across columns, OR within a column. (The old check tested whether
         // the selected label *contained the whole cell*, so multi-answer cells
         // like "Interview; Survey" never matched and empty cells always did.)
-        return Object.keys(activeCriteria).every(col => rowMatchesLabels(item[col], activeCriteria[col]))
+        const failed = activeCols.filter(col => !rowMatchesLabels(item[col], activeCriteria[col]));
+        if (failed.length === 1) facetBase[failed[0]].push(item);
+        if (failed.length) return !1;
+        activeCols.forEach(c => facetBase[c].push(item));
+        return !0
     });
     // Best matches first while searching (ties keep year order).
     if (currentSearch && currentSearch.groups.length) {
@@ -671,9 +682,77 @@ function applyFilters(args) {
             : ''
     }
     renderTable(filteredData);
+    updateFilterCounts(filteredData, facetBase);
     const isActive = filteredData.length < csvData.length;
     document.querySelector(".recordsStatus").innerHTML = `Records ${isActive ? '<span class="ui green empty circular label" role="img" aria-label="Filters active"></span>' : ''}`;
     announceResults()
+}
+
+// ---------------------------------------------------------------------------
+// Live option counts (faceted search)
+// Each option in the three tag dropdowns shows how many studies you would get
+// if you picked it, given everything else that is filtered. Options that would
+// return nothing are greyed out and can't be picked (selected tags always stay
+// removable). Screen readers hear e.g. "Study Method Interview, 92 studies".
+// ---------------------------------------------------------------------------
+var optionItems = null; // token -> menu item element
+
+// Cached set of normalised answers per study and column ("Other: …" also adds "other").
+function canonSet(row, col) {
+    let cache = row.__canonCache;
+    if (!cache) {
+        cache = new Map();
+        Object.defineProperty(row, '__canonCache', { value: cache })
+    }
+    let set = cache.get(col);
+    if (!set) {
+        set = new Set();
+        splitValues(row[col]).forEach(v => {
+            const c = canon(v);
+            set.add(c);
+            if (c.startsWith('other')) set.add('other')
+        });
+        cache.set(col, set)
+    }
+    return set
+}
+
+function initOptionCounts() {
+    optionItems = {};
+    document.querySelectorAll('.firstDropdown .menu .item[data-value], .secondDropdown .menu .item[data-value], .thirdDropdown .menu .item[data-value]').forEach(item => {
+        const token = item.getAttribute('data-value');
+        // Keep the plain label for Fomantic (selected-tag text and menu search),
+        // so the count never ends up inside a tag like "Interview92".
+        const text = item.textContent.replace(/\s+/g, ' ').trim();
+        item.setAttribute('data-text', text);
+        $(item).data('text', text);
+        const badge = document.createElement('span');
+        badge.className = 'option-count';
+        badge.setAttribute('aria-hidden', 'true');
+        const sr = document.createElement('span');
+        sr.className = 'sr-only option-count-sr';
+        item.append(badge, sr);
+        optionItems[token] = item
+    })
+}
+
+function updateFilterCounts(results, facetBase) {
+    if (!optionItems) initOptionCounts();
+    for (const [token, item] of Object.entries(optionItems)) {
+        const meta = LOOKUP_CACHE[token];
+        if (!meta) continue;
+        if (!meta.canonVal) meta.canonVal = canon(meta.val);
+        const rows = facetBase[meta.col] || results;
+        let n = 0;
+        for (let i = 0; i < rows.length; i++) if (canonSet(rows[i], meta.col).has(meta.canonVal)) n++;
+        item.querySelector('.option-count').textContent = n;
+        item.querySelector('.option-count-sr').textContent = `, ${n} ${n === 1 ? 'study' : 'studies'}`;
+        const zero = n === 0 && !item.classList.contains('active');
+        item.classList.toggle('disabled', zero);
+        item.classList.toggle('zero-count', n === 0);
+        if (zero) item.setAttribute('aria-disabled', 'true');
+        else item.removeAttribute('aria-disabled')
+    }
 }
 
 // One concise, debounced screen-reader message per filter change, e.g.
@@ -1773,6 +1852,7 @@ function doInitialization() {
     fixDropdownAccessibility($(".thirdDropdown"), "Filter by participants");
     document.querySelector(".totalRecords").innerHTML = csvData.length;
     renderTable(csvData);
+    updateFilterCounts(csvData, {});
     setTimeout(getPlot, 100);
     const hasSeenTour = localStorage.getItem('pht_lab_tour_seen');
     if (hasSeenTour === null || hasSeenTour === 'false') {

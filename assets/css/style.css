@@ -3197,3 +3197,37 @@ ul li {
 [data-theme="dark"] #abstractModalContent a {
     color: #93c5fd
 }
+
+/* Live option counts in the filter menus */
+.ui.dropdown .menu > .item[data-value] {
+    display: flex !important;
+    align-items: center;
+    gap: 8px
+}
+
+.ui.dropdown .menu > .item .option-count {
+    margin-left: auto;
+    min-width: 2.2em;
+    padding: 1px 7px;
+    border-radius: 999px;
+    font-size: .8rem;
+    font-weight: 700;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+    background: var(--ds-border-subtle, #e2e8f0);
+    color: var(--ds-text-primary, #0f172a)
+}
+
+/* Options that would return no studies: greyed, not selectable (still readable) */
+.ui.dropdown .menu > .item.zero-count.disabled {
+    opacity: 1 !important;
+    color: var(--ds-text-secondary, #475569) !important;
+    font-style: italic;
+    cursor: not-allowed !important
+}
+
+.ui.dropdown .menu > .item.zero-count .option-count {
+    background: transparent;
+    border: 1px dashed var(--ds-text-secondary, #475569);
+    color: var(--ds-text-secondary, #475569)
+}

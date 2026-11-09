@@ -156,8 +156,8 @@ cross-checked independently against the raw data.
 4. ~~Plot dropdown visible on grid tabs~~ (fixed).
 5. ~~Desktop-only shield~~ (fixed: the layout reflows at 200% and 400% zoom). The phone layout is
    usable but not polished.
-6. **16 filter options match 0 studies** (e.g. chance-based, Mail recruitment). They are offered
-   with no counts, so users can pick empty filters.
+6. ~~Filter options without counts~~ (fixed: each option shows how many studies it would return,
+   and zero-result options are greyed out; section 11).
 7. **The chart always stacks by Participant Groups**; there's no choice of stack variable and no % view.
 8. The Data tab shows only cards (5 per page). There's no sortable table and no page-size choice.
 9. Accessibility: axe now reports 0 WCAG 2.2 AA violations (section 8). Still open: manual testing
@@ -184,7 +184,7 @@ infrastructure, **P3** = nice to have.
 | T1 | P0 | Push these fixes to the real GitHub repo (needs repo access) as a reviewed PR | PR merged |
 | T2 | P0 | ✅ **Done.** `tools/build-data.js` (section 10) | One command regenerates `data.js`; audit passes |
 | T3 | P0 | Partly done: the pipeline now fixes answer spellings, DOIs and duplicate IDs automatically. Remaining: fix the column-name typos in the Covidence template (`Casegivers`, `Motor of physical impairment`, `Brainstormming`, `Convienience`) | Template typos gone |
-| T4 | P1 | Show live counts beside every filter option; grey out zero-count options | Counts update with filters |
+| T4 | P1 | ✅ **Done** (section 11): live counts beside every filter option; zero-result options greyed out | Counts update with filters |
 | T5 | P1 | ✅ Mostly done (viridis scale, legend, counts in cells). Remaining: a per-row "N/A / undisclosed" column | Rows sum to N |
 | T6 | P1 | Chart controls: choose the stack-by variable, count or % view; hide the plot menu on grid tabs | — |
 | T7 | P1 | Data tab: sortable table view, page-size selector, column chooser | — |
@@ -333,3 +333,26 @@ Data corrections it made:
 - 229 misspelled answers fixed.
 - Torrente 2012, Zhang 2023, Li 2022 and Ostiz-Blanco 2018 became `a`/`b`.
 - One title that the hand-made file had truncated was restored ("If you've gone straight, now, you must turn left" …).
+
+## 11. Live option counts (faceted filtering)
+
+Every option in the three tag menus (PHT Lab Framework, Characteristics of Included Studies,
+Participants) shows a number: **how many studies you would get if you picked it**, given everything
+else you've filtered on (search box, text fields and the other tag groups).
+
+- Options in the **same group** are combined with OR, so a group's own selections don't change its
+  own counts. For example, with *Interview* selected, *Survey* still shows how many Survey studies
+  match the other filters.
+- Options that would return **no studies** are greyed out (italic, dashed badge) and can't be picked
+  with the mouse or keyboard. Already-selected options always stay removable.
+- Screen readers hear the count as part of the option, e.g. "Study Method, Interview, 92 studies".
+  Zero-result options are announced as dimmed.
+- Updating all 190 counts takes about 8 ms.
+
+Checked on 2026-11-09:
+- From a clean start, all 174 non-zero options showed exactly the number of results you get after
+  picking them.
+- With *Interview* and the search "blind" active, all 79 options in the other groups matched exactly.
+- At the start, 16 options have no studies (e.g. chance-based play, Mail recruitment), and they are
+  greyed out.
+- axe still reports 0 WCAG 2.2 AA violations.

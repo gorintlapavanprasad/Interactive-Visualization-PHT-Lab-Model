@@ -1,8 +1,10 @@
 {
   "name": "pht-lab-tools",
   "private": true,
-  "description": "Data audit and accessibility test tools for the PHT Lab dashboard",
+  "description": "Data pipeline, audit and automated tests for the PHT Lab dashboard",
   "scripts": {
+    "test": "node audit-data.js && node ci-test.js",
+    "test:update-golden": "node ci-test.js --update-golden",
     "build-data": "node build-data.js",
     "build-data:check": "node build-data.js --dry-run",
     "audit": "node audit-data.js",

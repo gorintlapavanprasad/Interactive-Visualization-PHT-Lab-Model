@@ -1,0 +1,31 @@
+{
+  "dataFingerprint": "07b3fa58449402aa",
+  "recorded": "2026-11-09",
+  "values": {
+    "total": 216,
+    "Study Method = Interview": 92,
+    "Study Method = Interview OR Survey": 119,
+    "Interview AND Mostly Symmetrical": 10,
+    "Participant Groups = People with disabilities": 174,
+    "Year 2010-2012": 28,
+    "Author Ostiz-Blanco or Kamel": 4,
+    "search \"blind\"": 78,
+    "search \"BLV\"": 78,
+    "search \"vr\"": 15,
+    "search \"virtual reality\"": 15,
+    "search \"blind -game\"": 12,
+    "search \"blind OR deaf\"": 94,
+    "search \"musica\"": 5,
+    "search \"zzzqqq\"": 0,
+    "search \"blind\" top result": "Yuan 2008",
+    "grid: Fun-First vs. Utility-First (Initial Design Intention)": "53,19,41,41,30",
+    "grid: Play vs. Game": "31,25,20,17,90",
+    "grid: Social vs. Solo": "98,15,34,21,15",
+    "grid: Competitive vs. Collaborative": "88,9,23,21,31",
+    "grid: Skill vs. Chance": "112,29,21,0,0",
+    "grid: Symmetrical vs. Asymmetrical": "100,27,26,6,21",
+    "grid: Sequential vs. Simultaneous": "18,24,8,58,72",
+    "grid: Synchronous vs. Asynchronous": "132,29,16,1,5",
+    "zero-count options": 16
+  }
+}

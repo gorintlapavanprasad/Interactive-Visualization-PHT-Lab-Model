@@ -1,0 +1,49 @@
+name: Tests
+
+# Runs on every push to main, on every pull request, and on demand
+# (Actions tab -> Tests -> Run workflow).
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Data, correctness, accessibility, offline, speed
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: tools
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tools/package-lock.json
+
+      - name: Install test tools (axe-core, puppeteer-core)
+        run: npm ci
+
+      - name: Data audit
+        run: node audit-data.js
+
+      - name: Browser tests
+        run: node ci-test.js
+        env:
+          CI: "true"
+          CHROME_PATH: /usr/bin/google-chrome
+
+      - name: Upload screenshots of failures
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: failure-screenshots
+          path: tools/ci-artifacts/
+          if-no-files-found: ignore

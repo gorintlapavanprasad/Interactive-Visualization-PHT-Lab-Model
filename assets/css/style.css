@@ -3130,3 +3130,70 @@ ul li {
     background: transparent !important;
     cursor: default
 }
+
+/* Search all fields + direct paper links */
+.field-help {
+    font-size: .8rem;
+    color: var(--ds-text-secondary);
+    margin-top: 4px;
+    line-height: 1.35
+}
+
+.search-status:empty {
+    display: none
+}
+
+.search-status {
+    font-weight: 600;
+    color: var(--ds-text-primary)
+}
+
+.secondUI mark {
+    background: #fde047;
+    color: #111827;
+    padding: 0 1px;
+    border-radius: 2px
+}
+
+.card-actions {
+    display: flex;
+    justify-content: flex-end;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--ds-border-subtle)
+}
+
+.card-actions .open-paper {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 32px;
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-weight: 600;
+    text-decoration: none;
+    border: 1px solid currentColor
+}
+
+.card-actions .open-paper:focus-visible,
+.secondUI .spanRight a:focus-visible {
+    outline: 3px solid var(--ds-focus-ring, #2563eb);
+    outline-offset: 2px
+}
+
+/* Paper links: AA contrast in both themes (default link blue was ~4:1) */
+.card-actions .open-paper,
+.secondUI .spanRight a,
+#abstractModalContent a {
+    color: #1d4ed8
+}
+
+.secondUI .spanRight a {
+    text-decoration: underline;
+    text-underline-offset: 2px
+}
+
+[data-theme="dark"] .card-actions .open-paper,
+[data-theme="dark"] .secondUI .spanRight a,
+[data-theme="dark"] #abstractModalContent a {
+    color: #93c5fd
+}

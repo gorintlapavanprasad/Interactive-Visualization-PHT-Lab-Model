@@ -93,6 +93,17 @@
               <div class="position-relative">
 
 <form class="ui form inputFilters"  >
+  <div class="ui field question search-all">
+    <label for="globalSearch">Search all fields</label>
+    <div class="ui fluid icon input">
+      <input type="search" id="globalSearch" placeholder='e.g. blind game, "virtual reality", -autism'
+             aria-describedby="globalSearch-help" autocomplete="off" spellcheck="false" />
+      <i class="search icon" aria-hidden="true"></i>
+    </div>
+    <div id="globalSearch-help" class="field-help">Searches every column. Use quotes for a phrase, OR for either word, and - to exclude a word.</div>
+    <div id="globalSearch-status" class="field-help search-status" aria-hidden="true"></div>
+  </div>
+
   <div class="ui field question">
     <label for="titleFilter">Title</label>
     <div class="ui fluid input">

@@ -33,8 +33,8 @@ const pureEnd = script.indexOf('var LOOKUP_CACHE');
 if (pureEnd < 0) throw new Error('Could not find helper section in script.js');
 const helperCtx = {};
 vm.createContext(helperCtx);
-vm.runInContext(script.slice(0, pureEnd) + '\n;this.FILTER_SPECS=FILTER_SPECS;this.canon=canon;this.splitValues=splitValues;', helperCtx);
-const { FILTER_SPECS, canon, splitValues } = helperCtx;
+vm.runInContext(script.slice(0, pureEnd) + '\n;this.FILTER_SPECS=FILTER_SPECS;this.canon=canon;this.splitValues=splitValues;this.normalizeDoi=normalizeDoi;', helperCtx);
+const { FILTER_SPECS, canon, splitValues, normalizeDoi } = helperCtx;
 
 // --- grid cells from index.html ---
 const html = read('index.html');
@@ -56,8 +56,15 @@ rows.forEach(r => (byId[r['Study ID']] = byId[r['Study ID']] || []).push(r));
 Object.entries(byId).filter(([, v]) => v.length > 1)
   .forEach(([id, v]) => warn(`${id}: ${v.map(r => r.DOI || '(no DOI)').join(' | ')}`, false));
 
-section('Missing DOI');
-rows.filter(r => !String(r.DOI || '').trim()).forEach(r => warn(r['Study ID'], false));
+section('DOIs');
+rows.filter(r => !String(r.DOI || '').trim()).forEach(r => warn('Missing DOI: ' + r['Study ID'], false));
+rows.forEach(r => {
+  const raw = String(r.DOI || '').trim();
+  if (!raw) return;
+  const doi = normalizeDoi(raw);
+  if (!doi) warn(`Unusable DOI for ${r['Study ID']}: "${raw}"`);
+  else if (doi !== raw) warn(`Stored as a URL or messy (the app uses ${doi}): ${r['Study ID']} "${raw}"`, false);
+});
 
 section('Filter options that match no study');
 for (const group of Object.values(FILTER_SPECS)) {

@@ -284,13 +284,146 @@ function rowMatchesLabels(rawValue, wantedCanon) {
     })
 }
 
+// ---------------------------------------------------------------------------
+// DOIs
+// The export stores DOIs inconsistently: "10.1145/…", "https://doi.org/10.1145/…"
+// (15 studies) and one corrupted "http://dx.doi.org/10.1145/ 10.1145/…".
+// Keep the bare DOI ("10.xxxx/…") and build links from it, so every link goes
+// straight to the paper (the old modal produced https://doi.org/https://doi.org/…).
+// ---------------------------------------------------------------------------
+function normalizeDoi(raw) {
+    const matches = String(raw ?? '').match(/10\.\d{4,9}\/[^\s"<>]+/g);
+    return matches ? matches[matches.length - 1].replace(/[.,;)]+$/, '') : ''
+}
+
+function doiUrl(doi) {
+    return doi ? 'https://doi.org/' + doi.split('/').map(encodeURIComponent).join('/') : ''
+}
+
+// ---------------------------------------------------------------------------
+// "Search all fields" — one box that searches every column of every study.
+//   blind game            → studies containing BOTH words (any field, any case)
+//   "virtual reality"     → exact phrase
+//   -autism               → exclude studies containing the word
+//   blind OR deaf         → either word
+// Accents are ignored (Jesús = Jesus), words match prefixes/plurals (game → games),
+// and common accessibility abbreviations are expanded (VR, BLV, DHH, IDD, AR…).
+// Results are ranked: title matches first, then authors/ID, then framework ratings.
+// ---------------------------------------------------------------------------
+const SEARCH_SYNONYMS = {
+    'vr': ['virtual reality'], 'virtual reality': ['vr'],
+    'ar': ['augmented reality'], 'augmented reality': ['ar'],
+    'blv': ['blind', 'low vision', 'visually impaired', 'visual impairment'],
+    'blind': ['blv', 'visually impaired', 'visual impairment'],
+    'low vision': ['blv'], 'visually impaired': ['blind', 'blv'],
+    'dhh': ['deaf', 'hard of hearing'], 'deaf': ['dhh', 'hard of hearing'], 'hard of hearing': ['dhh', 'deaf'],
+    'idd': ['intellectual', 'developmental disab'], 'intellectual': ['idd'],
+    'asd': ['autism', 'autistic'], 'autism': ['autistic', 'asd'], 'autistic': ['autism', 'asd'],
+    'older adult': ['elderly', 'older people', 'aging', 'ageing'], 'elderly': ['older adult'],
+    'wheelchair': ['motor', 'mobility'], 'motor': ['physical impairment', 'mobility'],
+    'aac': ['augmentative', 'communication'], 'speech': ['communication'],
+    'exergame': ['exergam', 'exercise game', 'physical activity'],
+    'serious game': ['serious gam', 'educational game'], 'tangible': ['tangible interface'],
+    'haptic': ['haptics', 'vibrotactile', 'tactile'], 'audio game': ['audio gam', 'sound-based', 'audio-based']
+};
+
+function foldText(s) {
+    return String(s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ')
+}
+
+// Parse the query into groups of alternatives (AND between groups, OR inside).
+function parseSearchQuery(q) {
+    const tokens = [];
+    const re = /(-?)"([^"]+)"|(\S+)/g;
+    let m;
+    const src = foldText(q);
+    while ((m = re.exec(src))) {
+        if (m[2] !== undefined) tokens.push({ text: m[2].trim(), neg: m[1] === '-' });
+        else if (m[3]) tokens.push({ text: m[3].replace(/^-/, ''), neg: m[3].startsWith('-') && m[3].length > 1 });
+    }
+    // Treat known multi-word terms as phrases even without quotes
+    // ("virtual reality" -> also finds "VR"; "hard of hearing" -> also "DHH").
+    for (let i = 0; i < tokens.length; i++) {
+        for (const len of [3, 2]) {
+            const slice = tokens.slice(i, i + len);
+            if (slice.length === len && slice.every(t => !t.neg)) {
+                const phrase = slice.map(t => t.text).join(' ');
+                if (SEARCH_SYNONYMS[phrase]) { tokens.splice(i, len, { text: phrase, neg: !1 }); break }
+            }
+        }
+    }
+    const groups = [];
+    const negatives = [];
+    for (let i = 0; i < tokens.length; i++) {
+        const t = tokens[i];
+        if (!t.text || t.text === 'or') continue;
+        if (t.neg) { negatives.push(t.text); continue }
+        const alts = [t.text, ...(SEARCH_SYNONYMS[t.text] || [])];
+        if (groups.length && tokens[i - 1] && tokens[i - 1].text === 'or' && !tokens[i - 1].neg) {
+            groups[groups.length - 1].push(...alts)
+        } else {
+            groups.push(alts)
+        }
+    }
+    return { groups, negatives, terms: groups.flat() }
+}
+
+// Field weights for ranking.
+const SEARCH_WEIGHTS = { 'Title': 6, 'Study ID': 4, 'Lead author contact details': 4, 'DOI': 3, 'Notes (e.g., Why does the paper not fit the framework?)': 2 };
+
+function buildSearchIndex(rows) {
+    rows.forEach(row => {
+        // Index values only: column names like "Play vs. Game" would otherwise make
+        // "game" match every study.
+        const fields = Object.keys(row).filter(k => String(row[k] ?? '').trim() !== '')
+            .map(k => ({ key: k, text: foldText(row[k]), weight: SEARCH_WEIGHTS[k] || 1 }));
+        Object.defineProperty(row, '__search', { value: { all: fields.map(f => f.text).join(' | '), fields }, configurable: !0 })
+    })
+}
+
+// Short terms (≤ 3 chars, e.g. "vr", "ar") must match a whole word so "ar"
+// doesn't hit every "game" or "research"; longer terms match word starts.
+function termRegex(term) {
+    const esc = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return term.length <= 3 ? new RegExp('(^|[^a-z0-9])' + esc + '($|[^a-z0-9])') : new RegExp('(^|[^a-z0-9])' + esc)
+}
+
+// Returns 0 when the row doesn't match, otherwise a relevance score > 0.
+function searchScore(row, parsed) {
+    const idx = row.__search;
+    if (!idx) return 0;
+    for (const n of parsed.negatives) if (termRegex(n).test(idx.all)) return 0;
+    let score = 0;
+    for (const group of parsed.groups) {
+        let best = 0, hits = 0;
+        for (const alt of group) {
+            const re = termRegex(alt);
+            for (const f of idx.fields) {
+                if (re.test(f.text)) {
+                    hits++;
+                    best = Math.max(best, f.weight + (alt.includes(' ') ? 1 : 0))
+                }
+            }
+        }
+        if (!best) return 0;
+        // Best field decides the rank; matching in more fields breaks ties.
+        score += best + Math.min(hits, 10) * 0.05
+    }
+    return score
+}
+
 const PER_PAGE = 5;
 var LOOKUP_CACHE = {};
 var csvData = window.myModule ? window.myModule.filteredModuleData.sort((a, b) => a.Year - b.Year) : [];
 // "Study ID" (author + year) is NOT unique: e.g. two different "Zhang 2023" papers.
 // Give each row a hidden, stable key. Non-enumerable so it never shows up in the
 // cards, the plot options or the XLSX export.
-csvData.forEach((row, i) => Object.defineProperty(row, '__uid', { value: String(i) }));
+csvData.forEach((row, i) => {
+    Object.defineProperty(row, '__uid', { value: String(i) });
+    if ('DOI' in row) row.DOI = normalizeDoi(row.DOI)
+});
+buildSearchIndex(csvData);
+var currentSearch = null; // parsed query while a search is active (for ranking + highlighting)
 var filteredDataTmp = [];
 var GLOBAL_HASH_MAP = {};
 var allFilters = {};
@@ -497,7 +630,16 @@ function applyFilters(args) {
     const doiVal = getVal("DOIFilter");
     const yearVal = parseRangeInput(getVal("YearFilter", !1));
     const pagesVal = parseRangeInput(getVal("PagesFilter", !1));
+    const searchRaw = getVal("globalSearch", !1);
+    const parsed = searchRaw ? parseSearchQuery(searchRaw) : null;
+    currentSearch = parsed && (parsed.groups.length || parsed.negatives.length) ? parsed : null;
+    const scores = new Map();
     let filteredData = csvData.filter(item => {
+        if (currentSearch) {
+            const sc = searchScore(item, currentSearch);
+            if (!sc) return !1;
+            scores.set(item, sc)
+        }
         if (authorTerms.length) {
             const author = String(item["Lead author contact details"] || "").toLowerCase();
             if (!authorTerms.some(t => author.includes(t))) return !1
@@ -512,7 +654,22 @@ function applyFilters(args) {
         // like "Interview; Survey" never matched and empty cells always did.)
         return Object.keys(activeCriteria).every(col => rowMatchesLabels(item[col], activeCriteria[col]))
     });
+    // Best matches first while searching (ties keep year order).
+    if (currentSearch && currentSearch.groups.length) {
+        filteredData = filteredData
+            .map((r, i) => [r, i])
+            .sort((a, b) => (scores.get(b[0]) - scores.get(a[0])) || (a[1] - b[1]))
+            .map(x => x[0])
+    }
     filteredDataTmp = filteredData;
+    // Visible summary under the search box, updated immediately.
+    const status = document.getElementById('globalSearch-status');
+    if (status) {
+        const n = filteredData.length;
+        status.textContent = currentSearch
+            ? (n ? `${n} ${n === 1 ? 'study' : 'studies'} found${currentSearch.groups.length ? ', best matches first' : ''}` : 'No studies found. Try fewer words, or OR (e.g. blind OR deaf).')
+            : ''
+    }
     renderTable(filteredData);
     const isActive = filteredData.length < csvData.length;
     document.querySelector(".recordsStatus").innerHTML = `Records ${isActive ? '<span class="ui green empty circular label" role="img" aria-label="Filters active"></span>' : ''}`;
@@ -529,7 +686,7 @@ const announceResults = debounce(() => {
     setTimeout(() => {
         el.textContent = n === 0
             ? 'No studies match these filters.'
-            : `${n} of ${csvData.length} studies match.`
+            : `${n} of ${csvData.length} studies match.${currentSearch && currentSearch.groups.length ? ' Best matches first.' : ''}`
     }, 50)
 }, 600);
 
@@ -868,6 +1025,19 @@ function buildStudyCard(row) {
     card.setAttribute("aria-label", `${row["Study ID"] || "Study"}: ${row.Title || ""}`);
     if (row["Study ID"]) card.setAttribute("data-id", row["Study ID"]);
     card.setAttribute("data-uid", row.__uid);
+    // Direct link to the paper (publisher page via doi.org), first thing in the card.
+    if (row.DOI) {
+        const bar = document.createElement("div");
+        bar.className = "card-actions";
+        const a = document.createElement("a");
+        a.className = "open-paper";
+        a.href = doiUrl(row.DOI);
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        a.innerHTML = `<i class="ph ph-arrow-square-out" aria-hidden="true"></i> Open paper<span class="sr-only">: ${escapeHtml(row.Title || row["Study ID"])} (opens in a new tab)</span>`;
+        bar.appendChild(a);
+        card.appendChild(bar)
+    }
     Object.keys(row).forEach(key => {
         if (!key.trim()) return;
         const value = String(row[key] ?? "");
@@ -880,8 +1050,25 @@ function buildStudyCard(row) {
         span1.textContent = key;
         const span2 = document.createElement("span");
         span2.className = "spanRight";
-        span2.textContent = value;
-        if (["DOI", "Title", "Study ID"].includes(key)) {
+        if (key === "DOI") {
+            // The DOI itself is a real link to the paper.
+            const a = document.createElement("a");
+            a.href = doiUrl(value);
+            a.target = "_blank";
+            a.rel = "noopener noreferrer";
+            a.textContent = value;
+            const hint = document.createElement("span");
+            hint.className = "sr-only";
+            hint.textContent = " (opens paper in a new tab)";
+            a.appendChild(hint);
+            span2.appendChild(a);
+            divInner.appendChild(span1);
+            divInner.appendChild(span2);
+            card.appendChild(divInner);
+            return
+        }
+        highlightInto(span2, value);
+        if (["Title", "Study ID"].includes(key)) {
             divInner.classList.add("clickable-row", "selectable");
             divInner.setAttribute("tabindex", "0");
             divInner.setAttribute("role", "button");
@@ -906,6 +1093,24 @@ function buildStudyCard(row) {
         card.appendChild(divInner)
     });
     return card
+}
+
+// Write `text` into `el`, wrapping current search terms in <mark> (safe: no innerHTML).
+function highlightInto(el, text) {
+    const terms = currentSearch ? currentSearch.terms.filter(t => t.length > 1) : [];
+    if (!terms.length) { el.textContent = text; return }
+    const re = new RegExp('(' + terms.sort((a, b) => b.length - a.length)
+        .map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')', 'gi');
+    let last = 0, m;
+    while ((m = re.exec(text))) {
+        if (m.index > last) el.appendChild(document.createTextNode(text.slice(last, m.index)));
+        const mark = document.createElement('mark');
+        mark.textContent = m[0];
+        el.appendChild(mark);
+        last = m.index + m[0].length;
+        if (!m[0].length) re.lastIndex++
+    }
+    if (last < text.length) el.appendChild(document.createTextNode(text.slice(last)))
 }
 
 function renderCardsPage(page) {
@@ -1269,7 +1474,7 @@ function changeSpectrumIntensity() {
 
 
 // Includes NotesFilter, which export/import previously dropped.
-const TEXT_FILTER_IDS = ["YearFilter", "PagesFilter", "DOIFilter", "titleFilter", "authorFilter", "NotesFilter"];
+const TEXT_FILTER_IDS = ["globalSearch", "YearFilter", "PagesFilter", "DOIFilter", "titleFilter", "authorFilter", "NotesFilter"];
 
 function exportFilteredData() {
     if (!filteredDataTmp.length) return alert("No data to export.");
@@ -1347,9 +1552,9 @@ function populateAndShowStudyDetails(el) {
     if (!study) return;
     const field = (label, value) => String(value ?? '').trim()
         ? `<div class="item"><div class="header">${escapeHtml(label)}</div>${escapeHtml(value)}</div>` : '';
-    const doi = String(study["DOI"] || '').trim();
+    const doi = normalizeDoi(study["DOI"]);
     const doiHtml = doi
-        ? `<a href="https://doi.org/${encodeURI(doi)}" target="_blank" rel="noopener noreferrer">${escapeHtml(doi)}<span class="sr-only"> (opens in a new tab)</span></a>`
+        ? `<a href="${doiUrl(doi)}" target="_blank" rel="noopener noreferrer">${escapeHtml(doi)}<span class="sr-only"> (opens in a new tab)</span></a>`
         : 'Not recorded';
     // The export has no abstract column (the old modal always said "No abstract
     // available"), so show the study's framework ratings instead.

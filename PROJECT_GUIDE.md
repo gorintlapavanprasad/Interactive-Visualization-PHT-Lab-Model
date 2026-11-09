@@ -254,3 +254,33 @@ Re-run everything with:
 ```bash
 cd tools && npm install && npm run audit && npm run test:a11y
 ```
+
+## 9. Search and paper links (2026-11-09)
+
+### Search all fields
+The **Search all fields** box, first in the sidebar, searches every column of every study: title,
+authors, DOI, notes, every framework rating, methods, technology, context, country and so on.
+
+| Type | Finds |
+|---|---|
+| `blind game` | studies containing both words (anywhere, any case) |
+| `"virtual reality"` | the exact phrase |
+| `blind OR deaf` | either word |
+| `blind -game` | "blind" but not "game" |
+| `musica` / `música` | the same; accents are ignored |
+| `game` | also "games", "gameplay" (word starts) |
+| `VR`, `AR`, `BLV`, `DHH`, `IDD`, `ASD`, `AAC` | expanded to the full terms, and the full terms to the abbreviations |
+
+Results are **ranked**: title matches first, then author, Study ID or DOI, then notes, then other
+fields. Studies matching in more fields come next, and ties keep year order. Matches are highlighted
+in the study cards. The search combines with all other filters, and it is saved in XLSX export/import.
+
+### Paper links
+- 15 DOIs were stored as full URLs (`https://doi.org/10.1145/…`), and the old details link turned
+  them into broken `https://doi.org/https://doi.org/…` URLs.
+- One DOI (Alsaleem 2019) was corrupted: `http://dx.doi.org/10.1145/ 10.1145/3308561.3353775`.
+- The app now normalises every DOI to its bare form.
+- Each study card has an **Open paper** button and a clickable DOI. Both open
+  `https://doi.org/<DOI>` in a new tab, which redirects to the paper's page in the ACM Digital Library.
+- All 215 DOIs were checked against doi.org, and all 215 resolve. One study (Abreu 2020) has no DOI.
+- `tools/audit-data.js` now flags unusable or messy DOIs.

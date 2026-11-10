@@ -412,7 +412,6 @@ function searchScore(row, parsed) {
     return score
 }
 
-const PER_PAGE = 5;
 var LOOKUP_CACHE = {};
 var csvData = window.myModule ? window.myModule.filteredModuleData.sort((a, b) => a.Year - b.Year) : [];
 // "Study ID" (author + year) is NOT unique: e.g. two different "Zhang 2023" papers.
@@ -1292,26 +1291,226 @@ function highlightInto(el, text) {
     if (last < text.length) el.appendChild(document.createTextNode(text.slice(last)))
 }
 
-function renderCardsPage(page) {
-    const ui = document.querySelector(".secondUI");
-    const pages = Math.max(1, Math.ceil(filteredDataTmp.length / PER_PAGE));
+// ---------------------------------------------------------------------------
+// Data tab: Cards or Table view, sorting, page size, table columns.
+// Only the current page is rendered (keeps the page light).
+// ---------------------------------------------------------------------------
+const PAGE_SIZES = { cards: [5, 10, 25], table: [10, 25, 50, 100, 0] }; // 0 = all
+const DEFAULT_TABLE_COLUMNS = ['Study ID', 'Year', 'Title', 'Lead author contact details', 'Community of focus', 'Study Method', 'Technology Modality', 'DOI'];
+const SORTABLE_ALWAYS = ['Year', 'Title', 'Study ID', 'Lead author contact details', 'Pages', 'Primary Country'];
+var dataView = (() => { try { return localStorage.getItem('pht_data_view') === 'table' ? 'table' : 'cards' } catch { return 'cards' } })();
+var pageSizes = { cards: 5, table: 25 };
+var sortState = { col: '', dir: 'asc' }; // col '' = default order (year, or relevance while searching)
+var tableColumns = DEFAULT_TABLE_COLUMNS.slice();
+
+const columnLabel = col => ({ 'Lead author contact details': 'Lead author' }[col] || shortLabel(col));
+
+function pageSize() {
+    const n = pageSizes[dataView];
+    return n > 0 ? n : Math.max(1, filteredDataTmp.length)
+}
+
+function compareValues(a, b) {
+    const ea = a === '' || a == null, eb = b === '' || b == null;
+    if (ea || eb) return ea === eb ? 0 : ea ? 1 : -1; // blanks last in both directions
+    if (typeof a === 'number' && typeof b === 'number') return a - b;
+    const key = v => String(v).replace(/^[^\p{L}\p{N}]+/u, '');
+    return key(a).localeCompare(key(b), undefined, { numeric: !0, sensitivity: 'base' })
+}
+
+// Rows in display order: the filter/search order unless a sort is chosen.
+function sortedRows() {
+    if (!sortState.col) return filteredDataTmp;
+    const col = sortState.col, sign = sortState.dir === 'desc' ? -1 : 1;
+    return filteredDataTmp.map((r, i) => [r, i])
+        .sort((x, y) => {
+            const c = compareValues(x[0][col], y[0][col]);
+            const blank = v => v === '' || v == null;
+            if (blank(x[0][col]) || blank(y[0][col])) return c || x[1] - y[1]; // keep blanks last
+            return sign * c || x[1] - y[1]
+        })
+        .map(x => x[0])
+}
+
+const cellText = (row, col) => {
+    const v = row[col];
+    if (v === '' || v == null) return '';
+    if (typeof v === 'number') return String(v);
+    return splitValues(v).map(stripExample).join('; ')
+};
+
+function renderTablePage(rows) {
+    const table = document.querySelector('#studyTable');
+    const sortIcon = col => sortState.col !== col ? '↕' : (sortState.dir === 'asc' ? '▲' : '▼');
+    const ariaSort = col => sortState.col !== col ? 'none' : (sortState.dir === 'asc' ? 'ascending' : 'descending');
+    table.querySelector('thead').innerHTML = '<tr>' + tableColumns.map(col =>
+        `<th scope="col" aria-sort="${ariaSort(col)}"><button type="button" class="sort-button" data-col="${escapeHtml(col)}">${escapeHtml(columnLabel(col))}<span class="sort-icon" aria-hidden="true">${sortIcon(col)}</span></button></th>`
+    ).join('') + '</tr>';
+    const tbody = table.querySelector('tbody');
+    tbody.replaceChildren(...rows.map(row => {
+        const tr = document.createElement('tr');
+        tr.setAttribute('data-uid', row.__uid);
+        tableColumns.forEach((col, ci) => {
+            const cell = document.createElement(ci === 0 ? 'th' : 'td');
+            cell.className = 'col-' + col.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+            if (ci === 0) cell.setAttribute('scope', 'row');
+            const text = cellText(row, col);
+            if (col === 'DOI' && text) {
+                const a = document.createElement('a');
+                a.href = doiUrl(text); a.target = '_blank'; a.rel = 'noopener noreferrer';
+                a.textContent = text;
+                const hint = document.createElement('span'); hint.className = 'sr-only'; hint.textContent = ' (opens paper in a new tab)';
+                a.appendChild(hint);
+                cell.appendChild(a)
+            } else if (col === 'Title' && text) {
+                const b = document.createElement('button');
+                b.type = 'button'; b.className = 'link-button open-details'; b.setAttribute('data-uid', row.__uid);
+                highlightInto(b, text);
+                const hint = document.createElement('span'); hint.className = 'sr-only'; hint.textContent = ' (open study details)';
+                b.appendChild(hint);
+                cell.appendChild(b)
+            } else {
+                highlightInto(cell, text)
+            }
+            tr.appendChild(cell)
+        });
+        return tr
+    }));
+    if (!rows.length) tbody.innerHTML = `<tr><td colspan="${tableColumns.length}">No studies match these filters.</td></tr>`;
+    const pages = Math.max(1, Math.ceil(filteredDataTmp.length / pageSize()));
+    table.querySelector('caption').textContent = `Studies${sortState.col ? `, sorted by ${columnLabel(sortState.col)} ${sortState.dir === 'asc' ? 'ascending' : 'descending'}` : ''}; page ${currentPage} of ${pages}, ${filteredDataTmp.length} studies`
+}
+
+function renderDataPage(page) {
+    const rows = sortedRows();
+    const pages = Math.max(1, Math.ceil(rows.length / pageSize()));
     currentPage = Math.min(Math.max(1, page), pages);
-    const slice = filteredDataTmp.slice(PER_PAGE * (currentPage - 1), PER_PAGE * currentPage);
-    ui.replaceChildren(...slice.map(buildStudyCard));
-    if (!slice.length) ui.innerHTML = '<p class="no-results" role="status">No studies match these filters.</p>'
+    const slice = rows.slice(pageSize() * (currentPage - 1), pageSize() * currentPage);
+    const ui = document.querySelector(".secondUI");
+    const tableWrap = document.querySelector(".table-view");
+    ui.hidden = dataView !== 'cards';
+    tableWrap.hidden = dataView !== 'table';
+    if (dataView === 'table') {
+        ui.replaceChildren();
+        renderTablePage(slice)
+    } else {
+        document.querySelector('#studyTable tbody').replaceChildren();
+        ui.replaceChildren(...slice.map(buildStudyCard));
+        if (!slice.length) ui.innerHTML = '<p class="no-results" role="status">No studies match these filters.</p>'
+    }
+}
+
+// Kept for older callers.
+function renderCardsPage(page) { renderDataPage(page) }
+
+function setupPagination() {
+    $('#pagination-container').pagination({
+        items: filteredDataTmp.length,
+        itemsOnPage: pageSize(),
+        prevText: "Previous",
+        nextText: "Next",
+        onPageClick: (pg) => renderDataPage(pg)
+    })
+}
+
+function refreshDataView(page = 1) {
+    syncDataToolbar();
+    renderDataPage(page);
+    setupPagination();
+    if (page > 1) $('#pagination-container').pagination('drawPage', currentPage)
+}
+
+function announce(msg) {
+    const el = document.getElementById('sr-announcer');
+    if (!el) return;
+    el.textContent = '';
+    setTimeout(() => { el.textContent = msg }, 50)
+}
+
+// Keep the toolbar controls in step with the state.
+function syncDataToolbar() {
+    document.querySelectorAll('.view-toggle [data-view]').forEach(b => b.setAttribute('aria-pressed', String(b.getAttribute('data-view') === dataView)));
+    const size = document.getElementById('pageSize');
+    if (size) {
+        size.innerHTML = PAGE_SIZES[dataView].map(n => `<option value="${n}">${n === 0 ? 'All' : n}</option>`).join('');
+        size.value = String(pageSizes[dataView])
+    }
+    const sortBy = document.getElementById('sortBy');
+    if (sortBy) {
+        const cols = [...new Set([...SORTABLE_ALWAYS, ...tableColumns])];
+        sortBy.innerHTML = `<option value="">${currentSearch && currentSearch.groups.length ? 'Best match (search)' : 'Default (year)'}</option>` +
+            cols.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(columnLabel(c))}</option>`).join('');
+        sortBy.value = sortState.col
+    }
+    const dir = document.getElementById('sortDir');
+    if (dir) { dir.value = sortState.dir; dir.disabled = !sortState.col }
+    const chooser = document.querySelector('.column-chooser');
+    if (chooser) chooser.hidden = dataView !== 'table';
+    document.querySelectorAll('.column-chooser input[type=checkbox]').forEach(cb => { cb.checked = tableColumns.includes(cb.value) });
+    // The card field hider in the header only applies to cards.
+    if (document.querySelector('#Show-data-pane.active')) animateOptions(dataView === 'cards' ? 'plotFilter' : 'hide')
+}
+
+function initDataToolbar() {
+    // Column chooser: every column that has data, in data order.
+    const fs = document.querySelector('.column-chooser fieldset');
+    if (fs && !fs.querySelector('input')) {
+        const cols = Object.keys(csvData[0] || {}).filter(c => c.trim() && !c.trim().endsWith(':') && csvData.some(r => String(r[c] ?? '').trim()));
+        cols.forEach((c, i) => {
+            const id = 'tablecol-' + i;
+            const wrap = document.createElement('div');
+            wrap.className = 'column-option';
+            wrap.innerHTML = `<input type="checkbox" id="${id}" value="${escapeHtml(c)}"><label for="${id}">${escapeHtml(columnLabel(c))}</label>`;
+            fs.appendChild(wrap)
+        })
+    }
+    $(document).on('click', '.view-toggle [data-view]', function () {
+        dataView = this.getAttribute('data-view');
+        try { localStorage.setItem('pht_data_view', dataView) } catch { }
+        refreshDataView(1);
+        announce(`${dataView === 'table' ? 'Table' : 'Cards'} view, ${filteredDataTmp.length} studies.`)
+    });
+    document.getElementById('pageSize').addEventListener('change', e => {
+        pageSizes[dataView] = Number(e.target.value);
+        refreshDataView(1)
+    });
+    const applySort = (col, dir) => {
+        sortState = { col, dir: col ? dir : 'asc' };
+        refreshDataView(1);
+        announce(col ? `Sorted by ${columnLabel(col)}, ${dir === 'asc' ? 'ascending' : 'descending'}.` : 'Default order.')
+    };
+    document.getElementById('sortBy').addEventListener('change', e => applySort(e.target.value, sortState.col ? sortState.dir : (e.target.value === 'Year' ? 'desc' : 'asc')));
+    document.getElementById('sortDir').addEventListener('change', e => applySort(sortState.col, e.target.value));
+    // Table header buttons: first click ascending (numbers: newest/largest first), next click flips.
+    $(document).on('click', '#studyTable .sort-button', function () {
+        const col = this.getAttribute('data-col');
+        const numeric = filteredDataTmp.some(r => typeof r[col] === 'number');
+        const dir = sortState.col === col ? (sortState.dir === 'asc' ? 'desc' : 'asc') : (numeric ? 'desc' : 'asc');
+        applySort(col, dir);
+        const again = document.querySelector(`#studyTable .sort-button[data-col="${CSS.escape(col)}"]`);
+        if (again) again.focus()
+    });
+    $(document).on('click', '#studyTable .open-details', function () { showStudyDetails(this.getAttribute('data-uid')) });
+    const chooser = document.querySelector('.column-chooser');
+    document.addEventListener('click', e => { if (chooser.open && !chooser.contains(e.target)) chooser.open = !1 }, !0);
+    chooser.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && chooser.open) { chooser.open = !1; chooser.querySelector('summary').focus() }
+    });
+    $(document).on('change', '.column-chooser input[type=checkbox]', function () {
+        const checked = [...document.querySelectorAll('.column-chooser input[type=checkbox]')].filter(cb => cb.checked).map(cb => cb.value);
+        if (!checked.length) { this.checked = !0; return } // keep at least one column
+        // Keep the current order; newly ticked columns are added at the end.
+        tableColumns = tableColumns.filter(c => checked.includes(c)).concat(checked.filter(c => !tableColumns.includes(c)));
+        if (sortState.col && !tableColumns.includes(sortState.col) && !SORTABLE_ALWAYS.includes(sortState.col)) sortState = { col: '', dir: 'asc' };
+        refreshDataView(currentPage)
+    });
+    syncDataToolbar()
 }
 
 function renderTable(data, innerEdit) {
     if (!innerEdit) {
         document.querySelector(".currentRecords").textContent = data.length;
-        renderCardsPage(1);
-        $('#pagination-container').pagination({
-            items: data.length,
-            itemsOnPage: PER_PAGE,
-            prevText: "Previous",
-            nextText: "Next",
-            onPageClick: (pg) => renderCardsPage(pg)
-        })
+        refreshDataView(1)
     }
     const headers = data.length > 0 ? Object.keys(data[0]) : [];
     const $plotFilter = $('#plotFilter');
@@ -1629,15 +1828,15 @@ $(document).on('click keydown', '.study-jump-item[data-uid]', function (e) {
 
 function jumpToStudyFromModal(uid) {
     $("#spectrumData").modal('hide');
-    const idx = filteredDataTmp.findIndex(r => r.__uid === uid);
+    const idx = sortedRows().findIndex(r => r.__uid === uid);
     if (idx === -1) return;
     const dataTabTrigger = document.querySelector('#Show-data');
     if (dataTabTrigger) dataTabTrigger.click();
-    const page = Math.floor(idx / PER_PAGE) + 1;
+    const page = Math.floor(idx / pageSize()) + 1;
     $("#pagination-container").pagination('selectPage', page);
-    if (currentPage !== page) renderCardsPage(page);
+    if (currentPage !== page) renderDataPage(page);
     setTimeout(() => {
-        const $target = $(`.divOuter[data-uid="${uid}"]`);
+        const $target = $(`.divOuter[data-uid="${uid}"], #studyTable tr[data-uid="${uid}"]`);
         if (!$target.length) return;
         $target.addClass('jump-highlight');
         $target[0].scrollIntoView({
@@ -1674,6 +1873,12 @@ function exportFilteredData() {
     const cc = chartControlState();
     settings.chartColourBy = cc.stackCol || "none";
     settings.chartShow = cc.mode;
+    // Study list view (column names can contain commas, so columns use "|")
+    settings.dataView = dataView;
+    settings.sortBy = sortState.col || 'default';
+    settings.sortOrder = sortState.dir;
+    settings.perPage = pageSizes[dataView] || 'all';
+    settings.tableColumns = tableColumns.join('|');
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(filteredDataTmp), "Filtered Data");
     const filterRows = [
@@ -1718,6 +1923,17 @@ function handleDataImport(e) {
         }
         if (imported.chartShow) document.getElementById("plotMode").value = imported.chartShow === "percent" ? "percent" : "count";
         viewsDirty.plot = !0;
+        if (imported.dataView === 'table' || imported.dataView === 'cards') dataView = imported.dataView;
+        if (imported.tableColumns) {
+            const known = Object.keys(csvData[0] || {});
+            const cols = String(imported.tableColumns).split('|').filter(c => known.includes(c));
+            if (cols.length) tableColumns = cols
+        }
+        if (imported.sortBy) sortState = { col: imported.sortBy === 'default' ? '' : String(imported.sortBy), dir: imported.sortOrder === 'desc' ? 'desc' : 'asc' };
+        if (imported.perPage != null) {
+            const n = imported.perPage === 'all' ? 0 : Number(imported.perPage);
+            if (PAGE_SIZES[dataView].includes(n)) pageSizes[dataView] = n
+        }
         if (imported.removeColumns) {
             $('#removeColumns').dropdown('set exactly', imported.removeColumns.split(','))
         }
@@ -1735,9 +1951,12 @@ function handleDataImport(e) {
 }
 
 function populateAndShowStudyDetails(el) {
+    showStudyDetails(el.closest('[data-uid]').getAttribute('data-uid'))
+}
+
+function showStudyDetails(uid) {
     // Look up by the unique row key: "Study ID" repeats (e.g. two "Zhang 2023"
     // papers), so find-by-ID opened the wrong paper for the second of each pair.
-    const uid = el.closest('.divOuter').getAttribute('data-uid');
     const study = csvData.find(i => i.__uid === uid);
     if (!study) return;
     const field = (label, value) => String(value ?? '').trim()
@@ -1963,6 +2182,7 @@ function doInitialization() {
     fixDropdownAccessibility($(".thirdDropdown"), "Filter by participants");
     document.querySelector(".totalRecords").innerHTML = csvData.length;
     initChartControls();
+    initDataToolbar();
     renderTable(csvData);
     updateFilterCounts(csvData, {});
     setTimeout(getPlot, 100);
@@ -2012,6 +2232,8 @@ document.addEventListener("DOMContentLoaded", () => {
             // Draw whatever became stale while this tab was hidden.
             renderVisibleViews(tabPath);
             if (tabPath === 'Show-plot' && plotState.chart) plotState.chart.reflow();
+            // The card field hider only makes sense in Cards view.
+            if (tabPath === 'Show-data') animateOptions(dataView === 'cards' ? 'plotFilter' : 'hide');
             affirmByPath(tabPath)
         }
     });

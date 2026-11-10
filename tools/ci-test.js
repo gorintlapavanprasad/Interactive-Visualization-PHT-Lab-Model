@@ -63,7 +63,8 @@ async function openPage(browser, base, { width = 1440, height = 900 } = {}) {
   page.__errors = [];
   page.on('pageerror', e => page.__errors.push(e.message));
   page.on('console', m => { if (m.type() === 'error') page.__errors.push(m.text()) });
-  await page.evaluateOnNewDocument(() => localStorage.setItem('pht_lab_tour_seen', 'true'));
+  // Start every test page from the same state (tour seen, default Cards view).
+  await page.evaluateOnNewDocument(() => { localStorage.setItem('pht_lab_tour_seen', 'true'); localStorage.removeItem('pht_data_view') });
   await page.goto(base, { waitUntil: 'networkidle0', timeout: 60000 });
   await page.waitForFunction(() => document.querySelector('.currentRecords')?.textContent && window.plotState?.chart, { timeout: 30000 });
   return page;
@@ -267,6 +268,58 @@ async function collectGolden(page) {
     check('chart choices are saved in the Excel export', chart.exported.includes('chartColourBy=Symmetrical vs. Asymmetrical') && chart.exported.includes('chartShow=count'), chart.exported.join(', '));
     check('changing chart options reuses one chart (no leaks)', chart.instances === 1, `${chart.instances} chart instances`);
 
+    // ------------------------------------------------- study list (table) ----
+    console.log('\nstudy list: cards / table');
+    await tab(page, 'Show-data');
+    const list = await page.evaluate(async () => {
+      const wait = () => new Promise(r => setTimeout(r, 50));
+      applyFilters('reset'); await wait();
+      const out = { cardsByDefault: document.querySelectorAll('.secondUI .divOuter').length };
+      document.querySelector('.view-toggle [data-view="table"]').click(); await wait();
+      const rows = () => [...document.querySelectorAll('#studyTable tbody tr')];
+      const colIdx = c => tableColumns.indexOf(c);
+      out.tableRows = rows().length;
+      out.tablePressed = document.querySelector('.view-toggle [data-view="table"]').getAttribute('aria-pressed');
+      // sort by Year with the header button: newest first, then oldest first
+      document.querySelector('#studyTable .sort-button[data-col="Year"]').click(); await wait();
+      const years = () => rows().map(tr => +tr.children[colIdx('Year')].textContent);
+      const maxYear = Math.max(...csvData.map(r => r.Year)), minYear = Math.min(...csvData.map(r => r.Year));
+      out.yearDesc = { first: years()[0], max: maxYear, ariaSort: document.querySelector('#studyTable .sort-button[data-col="Year"]').closest('th').getAttribute('aria-sort'), ordered: years().every((y, i, a) => i === 0 || a[i - 1] >= y) };
+      document.querySelector('#studyTable .sort-button[data-col="Year"]').click(); await wait();
+      out.yearAsc = { first: years()[0], min: minYear };
+      // page size
+      const size = document.getElementById('pageSize'); size.value = '50'; size.dispatchEvent(new Event('change')); await wait();
+      out.size50 = rows().length;
+      // column chooser: new column goes at the end
+      const cb = [...document.querySelectorAll('.column-chooser input')].find(i => i.value === 'Primary Country');
+      cb.checked = true; cb.dispatchEvent(new Event('change', { bubbles: true })); await wait();
+      out.lastColumn = tableColumns[tableColumns.length - 1];
+      out.headerCount = document.querySelectorAll('#studyTable thead th').length === tableColumns.length;
+      // DOI links and study details from the title button
+      out.doiOk = [...document.querySelectorAll('#studyTable a')].every(a => /^https:\/\/doi\.org\/10\./.test(a.href));
+      const btn = document.querySelector('#studyTable .open-details');
+      btn.click(); await new Promise(r => setTimeout(r, 600));
+      const study = csvData.find(r => r.__uid === btn.getAttribute('data-uid'));
+      out.details = document.getElementById('abstractModalHeader').textContent.includes(study['Study ID']);
+      $('#studyAbstractModal').modal('hide'); await new Promise(r => setTimeout(r, 500));
+      // searching shows best matches first when no sort is chosen
+      const sortBy = document.getElementById('sortBy'); sortBy.value = ''; sortBy.dispatchEvent(new Event('change')); await wait();
+      document.getElementById('globalSearch').value = 'blind'; applyFilters(); await wait();
+      out.searchFirst = rows()[0].getAttribute('data-uid') === filteredDataTmp[0].__uid;
+      return out;
+    });
+    check('Data tab opens in Cards view by default', list.cardsByDefault > 0, `${list.cardsByDefault} cards`);
+    check('Table view shows a page of rows and marks the button pressed', list.tableRows === 25 && list.tablePressed === 'true', `${list.tableRows} rows, aria-pressed=${list.tablePressed}`);
+    check('Year header sorts newest first, then oldest first (aria-sort set)', list.yearDesc.first === list.yearDesc.max && list.yearDesc.ordered && list.yearDesc.ariaSort === 'descending' && list.yearAsc.first === list.yearAsc.min, JSON.stringify({ desc: list.yearDesc, asc: list.yearAsc }));
+    check('"Per page" changes the number of rows', list.size50 === 50, `${list.size50} rows`);
+    check('Columns chooser adds the column at the end', list.lastColumn === 'Primary Country' && list.headerCount, list.lastColumn);
+    check('table DOI links go to doi.org; titles open the right study', list.doiOk && list.details);
+    check('while searching, the table shows best matches first', list.searchFirst);
+    if (!(await page.evaluate(() => !!window.axe))) await page.addScriptTag({ content: AXE });
+    const tableAxe = await page.evaluate(async () => (await axe.run(document, { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'] }, resultTypes: ['violations'] })).violations.map(v => `${v.id}: ${v.nodes.slice(0, 2).map(n => n.target.join(' ')).join(' | ')}`));
+    check('axe-core: 0 violations in Table view', tableAxe.length === 0, tableAxe.join('; '));
+    await page.evaluate(() => { applyFilters('reset'); document.querySelector('.view-toggle [data-view="cards"]').click() });
+
     // ------------------------------------------------------------ budget ----
     console.log('\nspeed and size budget');
     await tab(page, 'Show-plot');
@@ -326,11 +379,15 @@ async function collectGolden(page) {
     await tab(a11y, 'Show-plot');
     await a11y.focus('.secondDropdown input.search');
     await a11y.keyboard.type('Interview');
-    await sleep(300);
+    // Wait until the menu has filtered down to the option (as a user would see
+    // it) instead of a fixed pause — avoids a timing flake on slow CI machines.
+    await a11y.waitForFunction(() => [...document.querySelectorAll('.secondDropdown .menu .item[data-value="study_interview"]')]
+      .some(i => !i.classList.contains('filtered') && i.offsetParent !== null), { timeout: 5000 }).catch(() => {});
     await a11y.keyboard.press('Enter');
-    await sleep(1000);
+    await a11y.waitForFunction(() => /\d+ of \d+ studies match/.test(document.getElementById('sr-announcer').textContent), { timeout: 4000 }).catch(() => {});
     const said = await a11y.$eval('#sr-announcer', e => e.textContent);
-    check('keyboard filtering works and the result count is announced', /\d+ of \d+ studies match/.test(said), JSON.stringify(said));
+    const picked = await a11y.evaluate(() => $('.secondDropdown').dropdown('get value'));
+    check('keyboard filtering works and the result count is announced', /\d+ of \d+ studies match/.test(said) && picked === 'study_interview', `${JSON.stringify(said)} (selected: ${picked})`);
     if (results.some(r => !r.ok)) await a11y.screenshot({ path: path.join(ART, 'a11y.png') });
     await a11y.close();
     const zoom = await openPage(browser, base, { width: 720, height: 900 });

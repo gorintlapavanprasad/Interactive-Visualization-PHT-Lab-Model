@@ -707,9 +707,47 @@
           </div>
           <div class="ui tab" data-tab="Show-data" id="Show-data-pane" role="tabpanel" tabindex="0"
             aria-labelledby="sr-data-title">
-            <h2 id="sr-data-title" class="sr-only">Study Record Inventory: Detailed Qualitative Research Cards</h2>
+            <h2 id="sr-data-title" class="sr-only">Study list</h2>
+
+            <div class="data-toolbar" role="group" aria-label="Study list options">
+              <div class="chart-control">
+                <span class="control-label" id="view-label">View</span>
+                <div class="view-toggle" role="group" aria-labelledby="view-label">
+                  <button type="button" class="ui button" data-view="cards" aria-pressed="true"><i class="ph ph-cards" aria-hidden="true"></i> Cards</button>
+                  <button type="button" class="ui button" data-view="table" aria-pressed="false"><i class="ph ph-table" aria-hidden="true"></i> Table</button>
+                </div>
+              </div>
+              <div class="chart-control">
+                <label for="sortBy">Sort by</label>
+                <select id="sortBy"></select>
+              </div>
+              <div class="chart-control narrow">
+                <label for="sortDir">Order</label>
+                <select id="sortDir">
+                  <option value="asc">Ascending (A–Z, oldest)</option>
+                  <option value="desc">Descending (Z–A, newest)</option>
+                </select>
+              </div>
+              <div class="chart-control narrow">
+                <label for="pageSize">Per page</label>
+                <select id="pageSize"></select>
+              </div>
+              <details class="column-chooser" hidden>
+                <summary>Columns</summary>
+                <fieldset>
+                  <legend>Columns shown in the table</legend>
+                </fieldset>
+              </details>
+            </div>
 
             <div class="secondUI" role="list" aria-label="Studies list"></div>
+            <div class="table-view" hidden tabindex="0" role="region" aria-label="Studies table (scrolls sideways)">
+              <table id="studyTable" class="ui celled striped compact table">
+                <caption class="sr-only"></caption>
+                <thead></thead>
+                <tbody></tbody>
+              </table>
+            </div>
             <nav id="pagination-container" aria-label="Pagination navigation"></nav>
           </div>
 

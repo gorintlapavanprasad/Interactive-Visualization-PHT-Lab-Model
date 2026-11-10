@@ -158,7 +158,7 @@ cross-checked independently against the raw data.
 6. ~~Filter options without counts~~ (fixed: each option shows how many studies it would return,
    and zero-result options are greyed out; section 11).
 7. ~~Chart always coloured by participant groups, no % view~~ (fixed: chart controls; section 15).
-8. The Data tab shows only cards (5 per page). There's no sortable table and no page-size choice.
+8. ~~Data tab only shows cards~~ (fixed: Cards/Table views, sorting, page size, column chooser; section 16).
 9. Accessibility: axe now reports 0 WCAG 2.2 AA violations (section 8). Still open: manual testing
    with real NVDA, JAWS and VoiceOver users, a shorter tour, and Highcharts legend buttons that are
    17 px tall (they pass the spacing exception, but 24 px+ would be better).
@@ -188,11 +188,11 @@ infrastructure, **P3** = nice to have.
 | T4 | P1 | ✅ **Done** (section 11): live counts beside every filter option; zero-result options greyed out | Counts update with filters |
 | T5 | P1 | ✅ Mostly done (viridis scale, legend, counts in cells). Remaining: a per-row "N/A / undisclosed" column | Rows sum to N |
 | T6 | P1 | ✅ **Done** (section 15): "Colour bars by" any coded column or none; "Show" counts or percentages; framework order; "Not recorded" segment | — |
-| T7 | P1 | Data tab: sortable table view, page-size selector, column chooser | — |
+| T7 | P1 | ✅ **Done** (section 16): Cards/Table views, sortable columns, sort controls, page size, column chooser | — |
 | T8 | P1 | Cross-tab heatmap: any two dimensions (e.g. Community × Study Method) to show research gaps | — |
 | T9 | P2 | ✅ **Done** (section 12): no requests to other servers | Works with network off |
 | T10 | P2 | ✅ Automated part done (0 axe violations; reflow at 400% zoom; see section 8). Remaining: sessions with real screen-reader users, shorter tour | Signed off by disabled testers |
-| T11 | P2 | ✅ **Done** (section 13): GitHub Actions runs the data audit and 52 browser checks on every push and pull request | CI green on every push |
+| T11 | P2 | ✅ **Done** (section 13): GitHub Actions runs the data audit and 60 browser checks on every push and pull request | CI green on every push |
 | T12 | P2 | Code health: split `script.js` into modules, ESLint, upgrade jQuery, generate grid rows from config | — |
 | T13 | P2 | ✅ Mostly done (section 14): unused files and dead code removed, README added. Remaining (owner's decisions): choose a project LICENSE, confirm the Highcharts licence, archive the old DataSpectra repo | — |
 | T14 | P2 | ✅ **Done.** Live on GitHub Pages | Public URL |
@@ -404,7 +404,7 @@ Run the same tests on your own computer (needs Node 18+ and Google Chrome):
 cd tools && npm ci && npm test
 ```
 
-### What is checked (52 checks)
+### What is checked (60 checks)
 
 | Area | Checks |
 |---|---|
@@ -413,6 +413,7 @@ cd tools && npm ci && npm test
 | Real dropdowns | Add 2 tags, remove 1 → same as 1 tag; clearing tags shows every study |
 | Known results | 25 reference values: filter results (Interview = 92, …), search results (blind = 78, …), the top search result, every grid row and the number of empty options |
 | Logic | OR within a group never gives fewer studies; AND across groups never gives more; reset shows all |
+| Study list | Cards by default; Table view rows and pressed state; Year header sorts newest/oldest first with `aria-sort`; "Per page" works; new columns are added at the end; DOI links and title → right study; search keeps best matches first; axe finds 0 violations in Table view |
 | Chart controls | % without colour = % of filtered studies; with colour every bar adds up to 100% with n under it; framework order; data table matches the chart; blanks shown as "Not recorded"; choices saved in the export; one chart instance |
 | Accessibility | axe-core finds 0 WCAG 2.2 AA violations on every tab; every focusable control (including the settings menu) has a name a screen reader can read; keyboard filtering works and the count is announced; at 200% zoom the filters, the chart and its data table are usable with no horizontal scrolling |
 | Offline | No requests to outside servers; no missing files; fonts and icons load |
@@ -520,3 +521,44 @@ Checked on 2026-11-09:
   instance all behave as described.
 - No errors.
 - CI now runs 52 checks.
+
+## 16. Study list: Cards or Table (2026-11-09)
+
+The Data tab has a toolbar:
+
+- **View: Cards | Table.** Cards (one study per card, every field) is the default. The table shows
+  one study per row with chosen columns. The choice is remembered on this device.
+- **Sort by and Order** work in both views: Year, Title, Study ID, Lead author, Pages, Primary
+  Country or any table column. *Default* means year order, or **best match** while a search is
+  active. Blanks always go last, and leading quote marks are ignored when sorting titles.
+- **Per page:** Cards 5/10/25; Table 10/25/50/100/All.
+- **Columns (table only):** tick any column that has data. New columns are added at the end, so
+  your order is kept. At least one column always stays.
+
+In the table:
+- Each **column header is a button**. Click it, or press Enter or Space, to sort; press again to
+  reverse. Numeric columns such as Year sort newest/largest first on the first click. The header
+  carries `aria-sort`, and screen readers hear "Sorted by Year, descending."
+- The first column (Study ID) is the **row header**. The table has a caption with the current sort
+  and page.
+- **Title** is a button that opens the study details, and focus returns to it when the dialog
+  closes. **DOI** links straight to the paper. Search matches are highlighted.
+- Wide tables scroll sideways inside a keyboard-focusable region.
+
+Also:
+- "Jump to study" from the Ratings and Spectrum grids works in both views and with any sort or
+  page size.
+- View, sort, page size and table columns are saved in the Excel export and restored on import.
+  The column list is stored with "|" separators because column names can contain commas.
+- The card-only "Hide fields" control in the header is hidden while the table is shown.
+- The Columns panel closes when you click outside it or press Escape. Before this fix it could
+  cover the first rows and block clicks.
+
+Checked on 2026-11-09:
+- Keyboard sorting, aria-sort and announcements work.
+- Page sizes 25, 50, 100 and All behave correctly.
+- Opening details from the table works, with focus returning to the title.
+- Search keeps best matches first, and jump-to-study works from the grid.
+- The Excel round trip of all view settings works.
+- axe reports 0 violations in Table view, and there are no errors.
+- CI now runs 60 checks.

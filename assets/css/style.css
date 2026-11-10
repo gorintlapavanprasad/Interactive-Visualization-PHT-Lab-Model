@@ -3222,3 +3222,225 @@ ul li {
     outline: 3px solid var(--ds-focus-ring, #2563eb);
     outline-offset: 2px
 }
+
+/* Data tab: toolbar, Cards/Table toggle, column chooser, sortable table */
+.data-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 20px;
+    align-items: flex-end;
+    padding: 12px 16px 4px;
+    text-align: left
+}
+
+.chart-control.narrow {
+    min-width: 140px
+}
+
+.control-label {
+    font-size: .8rem;
+    font-weight: 700;
+    color: var(--ds-text-primary)
+}
+
+.view-toggle {
+    display: inline-flex
+}
+
+.view-toggle .ui.button {
+    min-height: 36px;
+    margin: 0;
+    border-radius: 0;
+    border: 1px solid var(--ds-border-strong, #64748b);
+    background: var(--ds-bg-panel, #fff);
+    color: var(--ds-text-primary, #0f172a)
+}
+
+.view-toggle .ui.button:first-child {
+    border-radius: 6px 0 0 6px
+}
+
+.view-toggle .ui.button:last-child {
+    border-radius: 0 6px 6px 0;
+    border-left: none
+}
+
+.view-toggle .ui.button[aria-pressed="true"] {
+    background: #1d4ed8;
+    border-color: #1d4ed8;
+    color: #fff
+}
+
+[data-theme="dark"] .view-toggle .ui.button[aria-pressed="true"] {
+    background: #93c5fd;
+    border-color: #93c5fd;
+    color: #0f172a
+}
+
+.view-toggle .ui.button:focus-visible,
+.column-chooser summary:focus-visible,
+.sort-button:focus-visible,
+.link-button:focus-visible {
+    outline: 3px solid var(--ds-focus-ring, #2563eb);
+    outline-offset: 2px
+}
+
+.column-chooser {
+    position: relative;
+    align-self: flex-end
+}
+
+.column-chooser summary {
+    min-height: 36px;
+    display: flex;
+    align-items: center;
+    padding: 4px 12px;
+    border: 1px solid var(--ds-border-strong, #64748b);
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--ds-text-primary);
+    font-weight: 600
+}
+
+.column-chooser fieldset {
+    position: absolute;
+    z-index: 20;
+    max-height: 340px;
+    overflow-y: auto;
+    width: 300px;
+    margin-top: 6px;
+    padding: 8px 12px;
+    border: 1px solid var(--ds-border-strong, #64748b);
+    border-radius: 6px;
+    background: var(--ds-bg-panel, #fff);
+    box-shadow: 0 6px 18px rgb(0 0 0 / .18)
+}
+
+.column-chooser legend {
+    font-weight: 700;
+    padding: 0 4px;
+    color: var(--ds-text-primary)
+}
+
+.column-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 28px;
+    color: var(--ds-text-primary)
+}
+
+.column-option input {
+    width: 18px;
+    height: 18px
+}
+
+.table-view {
+    overflow-x: auto;
+    padding: 8px 16px 16px
+}
+
+.table-view:focus-visible {
+    outline: 3px solid var(--ds-focus-ring, #2563eb);
+    outline-offset: -3px
+}
+
+#studyTable {
+    text-align: left;
+    font-size: .9rem
+}
+
+#studyTable th[scope="col"] {
+    white-space: nowrap;
+    padding: 0
+}
+
+#studyTable th[scope="row"] {
+    font-weight: 600;
+    white-space: nowrap
+}
+
+.sort-button {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    min-height: 36px;
+    padding: 6px 10px;
+    border: 0;
+    background: transparent;
+    color: var(--ds-text-primary);
+    font: inherit;
+    font-weight: 700;
+    text-align: left;
+    cursor: pointer
+}
+
+#studyTable th[aria-sort="ascending"] .sort-button,
+#studyTable th[aria-sort="descending"] .sort-button {
+    text-decoration: underline;
+    text-underline-offset: 3px
+}
+
+.sort-icon {
+    font-size: .75em;
+    opacity: .8
+}
+
+.link-button {
+    border: 0;
+    padding: 0;
+    background: none;
+    color: #1d4ed8;
+    font: inherit;
+    text-align: left;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer
+}
+
+[data-theme="dark"] .link-button,
+[data-theme="dark"] #studyTable a {
+    color: #93c5fd
+}
+
+#studyTable a {
+    color: #1d4ed8
+}
+
+#studyTable mark {
+    background: #fde047;
+    color: #111827
+}
+
+#studyTable tr.jump-highlight {
+    outline: 3px solid var(--ds-focus-ring, #2563eb)
+}
+
+/* Table column widths: readable titles, DOIs on one line */
+#studyTable td.col-title {
+    min-width: 22rem
+}
+
+#studyTable td.col-doi,
+#studyTable td.col-year {
+    white-space: nowrap
+}
+
+#studyTable td.col-lead-author-contact-details,
+#studyTable td.col-community-of-focus {
+    min-width: 9rem
+}
+
+/* Selected view: clearly filled (Fomantic button styles otherwise win) */
+.view-toggle .ui.button[aria-pressed="true"] {
+    background: #1d4ed8 !important;
+    border-color: #1d4ed8 !important;
+    color: #fff !important
+}
+
+[data-theme="dark"] .view-toggle .ui.button[aria-pressed="true"] {
+    background: #93c5fd !important;
+    border-color: #93c5fd !important;
+    color: #0f172a !important
+}

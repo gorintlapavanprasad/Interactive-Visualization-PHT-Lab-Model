@@ -21,6 +21,7 @@ participants.
   and get a data-table view.
 - **Ratings and Spectrum grids** show where studies sit on each spectrum (viridis colour scale with
   counts in the cells). Click a cell to list its studies.
+- **Browse studies** as cards or as a sortable table: choose columns, sort order and page size.
 - **Open each paper** directly through its DOI.
 - **Export** the filtered studies and filter settings to Excel, and import them again later.
 
@@ -60,7 +61,7 @@ updates the test values and runs the tests. Then commit `assets/js/data.js` and
 cd tools && npm ci && npm test
 ```
 
-The data audit plus 52 browser checks: filter counts, known results, accessibility, offline loading,
+The data audit plus 60 browser checks: filter counts, known results, accessibility, offline loading,
 page size and speed. They run automatically in GitHub Actions. Details are in `PROJECT_GUIDE.md` §13.
 
 ## Project layout

@@ -4,12 +4,13 @@
   "description": "Data pipeline, audit and automated tests for the PHT Lab dashboard",
   "scripts": {
     "lint": "cd .. && eslint .",
-    "test": "node audit-data.js && node ci-test.js",
+    "test": "npm run lint && node audit-data.js && node unit-test.js && node ci-test.js",
     "test:update-golden": "node ci-test.js --update-golden",
     "build-data": "node build-data.js",
     "build-data:check": "node build-data.js --dry-run",
     "audit": "node audit-data.js",
-    "test:a11y": "node a11y-persona-test.js http://127.0.0.1:8765/ latest"
+    "test:a11y": "node a11y-persona-test.js http://127.0.0.1:8765/ latest",
+    "test:unit": "node unit-test.js"
   },
   "devDependencies": {
     "axe-core": "^4.14.0",

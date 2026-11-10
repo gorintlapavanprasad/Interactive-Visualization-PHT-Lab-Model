@@ -44,9 +44,12 @@ const getVal = (id, lower = !0) => {
     const el = document.getElementById(id);
     return el ? (lower ? el.value.trim().toLowerCase() : el.value.trim()) : ""
 };
+// "2010-2020" -> [2010, 2020]; also accepts the range typed backwards ("2020-2010").
 const parseRangeInput = (input) => {
     if (!input) return null;
-    return input.includes('-') ? input.split('-').map(Number) : input
+    if (!input.includes('-')) return input.trim();
+    const [a, b] = input.split('-').map(Number);
+    return [Math.min(a, b), Math.max(a, b)]
 };
 const checkRange = (range, val) => {
     if (!val) return !1;

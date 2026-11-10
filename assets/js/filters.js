@@ -79,6 +79,8 @@ function applyFilters(args) {
         allFilters = {};
         filteredDataTmp = csvData;
         currentSearch = null;
+        const status = document.getElementById('globalSearch-status');
+        if (status) status.textContent = ''; // the old "N studies found" line must go too
         applyColumnFilter([]);
         renderTable(filteredDataTmp);
         updateFilterCounts(csvData, {});

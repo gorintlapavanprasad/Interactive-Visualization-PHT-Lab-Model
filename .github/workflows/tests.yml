@@ -37,6 +37,9 @@ jobs:
       - name: Data audit
         run: node audit-data.js
 
+      - name: Unit tests (search, matching, DOIs, data, pipeline)
+        run: node unit-test.js
+
       - name: Browser tests
         run: node ci-test.js
         env:

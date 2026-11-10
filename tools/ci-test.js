@@ -391,7 +391,205 @@ async function collectGolden(page) {
     });
     check('page stays small (DOM < 5,000 elements)', perf.dom < 5000, `${perf.dom} elements`);
     check('a filter change on the chart tab takes < 1,500 ms', perf.worstMs < 1500, `${perf.worstMs} ms`);
+
+    // ------------------------------------------------- deep-dive UI tests ----
+    // Expected values are computed here from the raw data with simple, separate
+    // logic (not by calling the app's own filter functions).
+    console.log('\ntext filters, reset and paging');
+    await tab(page, 'Show-data');
+    const tf = await page.evaluate(async () => {
+      const wait = ms => new Promise(r => setTimeout(r, ms));
+      const setText = async (id, v) => { const el = document.getElementById(id); el.value = v; el.dispatchEvent(new Event('input', { bubbles: true })); await wait(260) };
+      const clearAll = async () => { applyFilters('reset'); await wait(60) };
+      const n = () => filteredDataTmp.length;
+      const has = (cell, ans) => String(cell ?? '').split(';').map(s => s.trim()).some(s => s === ans || s.startsWith(ans + ' ('));
+      const out = {};
+      await clearAll(); await setText('titleFilter', 'Tactile');
+      out.title = { got: n(), want: csvData.filter(r => r.Title.toLowerCase().includes('tactile')).length };
+      await clearAll(); await setText('YearFilter', '2015');
+      out.yearSingle = { got: n(), want: csvData.filter(r => r.Year === 2015).length };
+      await clearAll(); await setText('YearFilter', '2010-2012');
+      out.yearRange = { got: n(), want: csvData.filter(r => r.Year >= 2010 && r.Year <= 2012).length };
+      await clearAll(); await setText('YearFilter', '2010 - 2012');
+      out.yearSpaced = n();
+      await clearAll(); await setText('YearFilter', '2012-2010');
+      out.yearReversed = n();
+      await clearAll(); await setText('PagesFilter', '0-6');
+      out.pages = { got: n(), want: csvData.filter(r => typeof r.Pages === 'number' && r.Pages <= 6).length };
+      await clearAll(); await setText('authorFilter', 'Kamel, Ostiz-Blanco');
+      out.authors = { got: n(), want: csvData.filter(r => /kamel|ostiz-blanco/i.test(r['Lead author contact details'])).length };
+      const noteWord = (csvData.find(r => String(r['Notes (e.g., Why does the paper not fit the framework?)'] || '').length > 5)?.['Notes (e.g., Why does the paper not fit the framework?)'] || '').split(/\s+/).find(w => w.length > 4) || '';
+      await clearAll(); await setText('NotesFilter', noteWord);
+      out.notes = { got: n(), want: csvData.filter(r => String(r['Notes (e.g., Why does the paper not fit the framework?)'] || '').toLowerCase().includes(noteWord.toLowerCase())).length, word: noteWord };
+      await clearAll(); await setText('YearFilter', '20x0');
+      const yf = document.getElementById('YearFilter');
+      out.invalid = { results: n(), ariaInvalid: yf.getAttribute('aria-invalid'), message: document.getElementById('YearFilter-error')?.textContent || '' };
+      // combined: tag + year range + search must be the intersection
+      await clearAll();
+      allFilters = { second: 'study_interview' }; applyFilters();
+      await setText('YearFilter', '2015-2023'); await setText('globalSearch', 'blind');
+      const blindRe = /(^|[^a-z0-9])(blind|blv|visually impaired|visual impairment)/i;
+      out.combined = { got: n(), want: csvData.filter(r => has(r['Study Method'], 'Interview') && r.Year >= 2015 && r.Year <= 2023 && Object.values(r).some(v => blindRe.test(String(v).normalize('NFD').replace(/[̀-ͯ]/g, '')))).length };
+      // reset clears everything
+      applyFilters('reset'); await wait(60);
+      out.reset = { results: n(), texts: ['titleFilter', 'authorFilter', 'YearFilter', 'PagesFilter', 'NotesFilter', 'globalSearch'].map(id => document.getElementById(id).value).join(''), tags: ['.firstDropdown', '.secondDropdown', '.thirdDropdown'].map(s => $(s).dropdown('get value')).join(''), status: document.getElementById('globalSearch-status').textContent, error: document.getElementById('YearFilter-error')?.textContent || '' };
+      // search with no results shows a message
+      await setText('globalSearch', 'zzzqqqxx');
+      out.noResults = { results: n(), message: document.querySelector('.secondUI')?.textContent.trim(), status: document.getElementById('globalSearch-status').textContent };
+      applyFilters('reset'); await wait(60);
+      // paging: page 2 = the next 5 studies, no overlap; page count and last page size
+      const ids = () => [...document.querySelectorAll('.secondUI .divOuter')].map(c => c.getAttribute('data-uid'));
+      const p1 = ids(); $('#pagination-container').pagination('selectPage', 2); await wait(60);
+      const p2 = ids();
+      const pages = $('#pagination-container').pagination('getPagesCount');
+      $('#pagination-container').pagination('selectPage', pages); await wait(60);
+      out.paging = { p1: p1.length, p2: p2.length, overlap: p1.filter(x => p2.includes(x)).length, inOrder: p2[0] === filteredDataTmp[5].__uid, pages, wantPages: Math.ceil(csvData.length / 5), last: ids().length, wantLast: csvData.length - 5 * (Math.ceil(csvData.length / 5) - 1) };
+      $('#pagination-container').pagination('selectPage', 1);
+      return out;
+    });
+    const same = (o) => o.got === o.want;
+    check('Title filter = studies whose title contains the text', same(tf.title) && tf.title.want > 0, JSON.stringify(tf.title));
+    check('Year filter, single year', same(tf.yearSingle) && tf.yearSingle.want > 0, JSON.stringify(tf.yearSingle));
+    check('Year filter, range (inclusive)', same(tf.yearRange), JSON.stringify(tf.yearRange));
+    check('Year range with spaces ("2010 - 2012") works', tf.yearSpaced === tf.yearRange.want, `${tf.yearSpaced}`);
+    check('Year range typed backwards ("2012-2010") still works', tf.yearReversed === tf.yearRange.want, `${tf.yearReversed} (want ${tf.yearRange.want})`);
+    check('Pages range filter', same(tf.pages), JSON.stringify(tf.pages));
+    check('Author filter with two names finds either', same(tf.authors) && tf.authors.want >= 2, JSON.stringify(tf.authors));
+    check('Notes filter', same(tf.notes) && tf.notes.want > 0, JSON.stringify(tf.notes));
+    check('invalid year: visible message, aria-invalid, results not changed', tf.invalid.results === 216 && tf.invalid.ariaInvalid === 'true' && /4-digit year/.test(tf.invalid.message), JSON.stringify(tf.invalid));
+    check('tag + year range + search combine as AND', same(tf.combined) && tf.combined.want > 0, JSON.stringify(tf.combined));
+    check('Reset clears every text box, tag, search status and error', tf.reset.results === 216 && !tf.reset.texts && !tf.reset.tags && !tf.reset.status && !tf.reset.error, JSON.stringify(tf.reset));
+    check('a search with no results says so', tf.noResults.results === 0 && /No studies/.test(tf.noResults.message) && /No studies found/.test(tf.noResults.status), JSON.stringify(tf.noResults));
+    check('paging: page 2 continues page 1 with no overlap', tf.paging.p1 === 5 && tf.paging.p2 === 5 && tf.paging.overlap === 0 && tf.paging.inOrder, JSON.stringify(tf.paging));
+    check('paging: page count and last page size are right', tf.paging.pages === tf.paging.wantPages && tf.paging.last === tf.paging.wantLast, JSON.stringify(tf.paging));
+
+    console.log('\nexport, import and safety');
+    const io = await page.evaluate(async () => {
+      const wait = ms => new Promise(r => setTimeout(r, ms));
+      applyFilters('reset'); await wait(60);
+      allFilters = { second: 'study_interview' }; document.getElementById('globalSearch').value = 'blind'; applyFilters(); await wait(60);
+      const expectN = filteredDataTmp.length;
+      let wb = null; const orig = XLSX.writeFile;
+      XLSX.writeFile = w => { wb = w }; exportFilteredData(); XLSX.writeFile = orig;
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets['Filtered Data']);
+      const settings = Object.fromEntries(XLSX.utils.sheet_to_json(wb.Sheets['Filter Settings']).map(r => [r['Filter Name'], r.Value]));
+      const out = { sheets: wb.SheetNames, rows: rows.length, expectN, internal: Object.keys(rows[0] || {}).filter(k => k.startsWith('__')), doiBare: rows.every(r => !r.DOI || /^10\./.test(r.DOI)), settings: { second: settings.second, globalSearch: settings.globalSearch } };
+      // import a workbook without a "Filter Settings" sheet -> refused, nothing changes
+      const bad = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(bad, XLSX.utils.aoa_to_sheet([['x']]), 'Other');
+      const bytes = XLSX.write(bad, { type: 'array', bookType: 'xlsx' });
+      let alerted = ''; const oa = window.alert; window.alert = m => { alerted = m };
+      handleDataImport({ target: { files: [new File([bytes], 'bad.xlsx')], value: '' } }); await wait(800);
+      window.alert = oa;
+      out.badImport = { alerted, resultsUnchanged: filteredDataTmp.length === expectN };
+      // HTML in the search box is shown as text, never run
+      applyFilters('reset'); await wait(60);
+      window.__xss = 0;
+      document.getElementById('globalSearch').value = '<img src=x onerror="window.__xss=1"> blind'; applyFilters(); await wait(300);
+      out.xss = { ran: window.__xss, injectedImgs: document.querySelectorAll('.secondUI img, #studyTable img, #globalSearch-status img').length };
+      applyFilters('reset'); await wait(60);
+      return out;
+    });
+    check('Excel export: one row per filtered study, no internal columns, clean DOIs', io.rows === io.expectN && !io.internal.length && io.doiBare && io.sheets.join() === 'Filtered Data,Filter Settings', JSON.stringify({ rows: io.rows, want: io.expectN, internal: io.internal }));
+    check('Excel export records the tags and the search', io.settings.second === 'study_interview' && io.settings.globalSearch === 'blind', JSON.stringify(io.settings));
+    check('importing a file without saved settings is refused, nothing changes', /Invalid/.test(io.badImport.alerted) && io.badImport.resultsUnchanged, JSON.stringify(io.badImport));
+    check('HTML typed into the search box is never run', io.xss.ran === 0 && io.xss.injectedImgs === 0, JSON.stringify(io.xss));
+
+    console.log('\ngrids and chart totals');
+    const gc = await page.evaluate(async () => {
+      const wait = ms => new Promise(r => setTimeout(r, ms));
+      applyFilters('reset'); await wait(60);
+      displaySpectrum();
+      const out = { dropped: [], mismatch: [] };
+      // every study is accounted for in each grid row: 5 cells + N/A + undisclosed + blank = all studies
+      document.querySelectorAll('.type-2 tr[data-row]').forEach(tr => {
+        const dim = tr.getAttribute('data-row');
+        const cells = [...tr.querySelectorAll('td[data-column]')].reduce((a, td) => a + +(td.getAttribute('data-count') || 0), 0);
+        const rest = csvData.filter(r => { const v = String(r[dim] ?? '').trim().toLowerCase(); return !v || v.startsWith('not applicable') || v.startsWith('undisclosed') }).length;
+        if (cells + rest !== csvData.length) out.dropped.push(`${dim}: ${cells}+${rest}≠${csvData.length}`);
+      });
+      // Ratings grid (dots) and Spectrum grid (numbers) agree cell by cell
+      const counts = sel => [...document.querySelectorAll(sel + ' td[data-column]')].map(td => +(td.getAttribute('data-count') || 0));
+      const a = counts('.type-1'), b = counts('.type-2');
+      out.gridsAgree = a.length === 40 && a.join() === b.join();
+      // Year chart: one study = one year, so distinct-study labels add up to all studies
+      document.getElementById('stackBy').value = 'Participant Groups'; document.getElementById('plotMode').value = 'count';
+      $('#plotFilter').dropdown('set selected', 'Year'); viewsDirty.plot = true; renderVisibleViews('Show-plot'); await wait(80);
+      out.yearTotal = plotState.totals.reduce((x, y) => x + y, 0);
+      const opts = [...document.querySelectorAll('#plotFilter .menu .item')].map(i => i.getAttribute('data-value'));
+      out.plotMenu = { hasYear: opts.includes('Year'), banned: opts.filter(o => ['Title', 'DOI', 'Study ID', 'Lead author contact details'].includes(o)), emptyCols: opts.filter(o => !csvData.some(r => String(r[o] ?? '').trim())) };
+      // Intensity slider changes the legend scale
+      const slider = document.getElementById('type2Intensity'); const before = document.querySelector('.type-2 + .viridis-legend .viridis-legend-max')?.textContent;
+      slider.value = 60; slider.dispatchEvent(new Event('input')); await wait(60);
+      out.legend = { before, after: document.querySelector('.type-2 + .viridis-legend .viridis-legend-max')?.textContent };
+      slider.value = 20; slider.dispatchEvent(new Event('input'));
+      return out;
+    });
+    check('no study is dropped from any grid row (cells + N/A + undisclosed = all)', !gc.dropped.length, gc.dropped.join('; '));
+    check('Ratings and Spectrum grids show the same 40 counts', gc.gridsAgree);
+    check('Year chart: distinct studies over all years = all studies', gc.yearTotal === 216, `${gc.yearTotal}`);
+    check('chart menu offers Year, not identifiers or empty columns', gc.plotMenu.hasYear && !gc.plotMenu.banned.length && !gc.plotMenu.emptyCols.length, JSON.stringify(gc.plotMenu));
+    check('intensity slider changes the colour scale legend', gc.legend.before && gc.legend.after && gc.legend.before !== gc.legend.after, JSON.stringify(gc.legend));
+
+    console.log('\nkeyboard, theme and tour');
+    // skip link moves focus to the main content
+    await page.evaluate(() => document.activeElement && document.activeElement.blur());
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Enter');
+    await sleep(200);
+    const skip = await page.evaluate(() => document.activeElement.id);
+    check('skip link moves focus to the main content', skip === 'main-content', skip);
+    // tab keyboard: ArrowRight / End / Home, roving tabindex
+    await page.focus('#Show-plot');
+    await page.keyboard.press('ArrowRight'); await sleep(250);
+    const k1 = await page.evaluate(() => ({ focus: document.activeElement.id, selected: document.querySelector('#Show-data').getAttribute('aria-selected') }));
+    await page.keyboard.press('End'); await sleep(250);
+    const k2 = await page.evaluate(() => document.activeElement.id);
+    await page.keyboard.press('Home'); await sleep(250);
+    const k3 = await page.evaluate(() => ({ focus: document.activeElement.id, stops: [...document.querySelectorAll('#myTab [role=tab]')].filter(t => t.getAttribute('tabindex') === '0').map(t => t.id) }));
+    check('tabs: Right/End/Home move between tabs; one tab stop', k1.focus === 'Show-data' && k1.selected === 'true' && k2 === 'Show-gaps' && k3.focus === 'Show-plot' && k3.stops.join() === 'Show-plot', JSON.stringify({ k1, k2, k3 }));
+    // grid tooltip: shows on focus, Escape hides it
+    await tab(page, 'Show-grid');
+    await page.focus('.type-2 td[data-count]');
+    await sleep(100);
+    const tipShown = await page.$eval('#grid-tooltip', e => !e.hidden && /studies/.test(e.textContent));
+    await page.keyboard.press('Escape');
+    const tipHidden = await page.$eval('#grid-tooltip', e => e.hidden);
+    check('grid tooltip appears on keyboard focus and Escape hides it', tipShown && tipHidden, JSON.stringify({ tipShown, tipHidden }));
+    // theme
+    await tab(page, 'Show-plot');
+    const th = await page.evaluate(async () => {
+      const wait = ms => new Promise(r => setTimeout(r, ms));
+      const bg = () => plotState.chart.options.chart.backgroundColor;
+      const before = { theme: document.documentElement.getAttribute('data-theme'), bg: bg() };
+      document.getElementById('theme').click(); await wait(200);
+      const dark = { theme: document.documentElement.getAttribute('data-theme'), bg: bg(), label: document.getElementById('theme-text').textContent };
+      document.getElementById('theme').click(); await wait(200);
+      return { before, dark, after: { theme: document.documentElement.getAttribute('data-theme'), bg: bg(), label: document.getElementById('theme-text').textContent } };
+    });
+    check('dark mode switches the page and chart, and switches back', th.dark.theme === 'dark' && th.dark.bg !== th.before.bg && /Dark/.test(th.dark.label) && th.after.theme !== 'dark' && th.after.bg === th.before.bg, JSON.stringify(th));
     await page.close();
+    // tour: starts on a first visit, cancelling remembers it
+    const fresh = await browser.newPage();
+    await fresh.setViewport({ width: 1440, height: 900 });
+    await fresh.evaluateOnNewDocument(() => { if (!sessionStorage.getItem('reloaded')) localStorage.removeItem('pht_lab_tour_seen') });
+    await fresh.goto(base, { waitUntil: 'networkidle0' });
+    await fresh.waitForFunction(() => window.Shepherd && Shepherd.activeTour, { timeout: 8000 }).catch(() => {});
+    const tour1 = await fresh.evaluate(() => ({ active: !!(window.Shepherd && Shepherd.activeTour), title: document.querySelector('.shepherd-title')?.textContent || '' }));
+    await fresh.keyboard.press('Escape');
+    await sleep(400);
+    const tour2 = await fresh.evaluate(() => ({ active: !!(window.Shepherd && Shepherd.activeTour), seen: localStorage.getItem('pht_lab_tour_seen') }));
+    check('guided tour starts on a first visit; Escape closes it and it is remembered', tour1.active && /Welcome/.test(tour1.title) && !tour2.active && tour2.seen === 'true', JSON.stringify({ tour1, tour2 }));
+    await fresh.close();
+    const page2 = await openPage(browser, base);
+    const cardLinks = await page2.evaluate(() => {
+      $('#myTab .item[data-tab="Show-data"]').trigger('click');
+      return [...document.querySelectorAll('.secondUI .divOuter')].map(c => {
+        const doi = [...c.querySelectorAll('.divInner')].find(d => d.querySelector('.spanLeft').textContent === 'DOI')?.querySelector('.spanRight').textContent.replace(' (opens paper in a new tab)', '');
+        return { href: c.querySelector('.open-paper')?.href, doi, target: c.querySelector('.open-paper')?.target, rel: c.querySelector('.open-paper')?.rel };
+      });
+    });
+    check('each card\'s "Open paper" link = doi.org + that card\'s DOI, new tab, noopener', cardLinks.length === 5 && cardLinks.every(l => l.href === 'https://doi.org/' + l.doi && l.target === '_blank' && /noopener/.test(l.rel)), JSON.stringify(cardLinks.find(l => l.href !== 'https://doi.org/' + l.doi) || ''));
+    await page2.close();
 
     // -------------------------------------------------------------- a11y ----
     console.log('\naccessibility');

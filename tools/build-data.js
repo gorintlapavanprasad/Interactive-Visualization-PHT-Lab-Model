@@ -4,6 +4,7 @@
  *
  *     node tools/build-data.js <covidence-export.csv>            # build + audit
  *     node tools/build-data.js <covidence-export.csv> --dry-run  # report only, write nothing
+ *     node tools/build-data.js <file.csv> --out=<path>            # write elsewhere, no audit (tests)
  *
  * What it does (in order):
  *   1. Parses the CSV (quoted fields, embedded commas/newlines, UTF-8 BOM).
@@ -27,8 +28,11 @@ const vm = require('vm');
 const { spawnSync } = require('child_process');
 
 const root = path.resolve(__dirname, '..');
-const OUT = path.join(root, 'assets/js/data.js');
 const args = process.argv.slice(2);
+// --out=<path> writes somewhere else (used by the tests, so they never touch the real data)
+const outArg = args.find(a => a.startsWith('--out='));
+const OUT = outArg ? path.resolve(outArg.slice(6)) : path.join(root, 'assets/js/data.js');
+const CUSTOM_OUT = !!outArg;
 const input = args.find(a => !a.startsWith('--'));
 const DRY = args.includes('--dry-run');
 if (!input) {
@@ -211,7 +215,8 @@ const banner = `// GENERATED FILE — do not edit by hand.
 const js = banner + 'const uniqueConsensusData = ' + JSON.stringify(studies, null, 4) + ';\n\n' +
   'window.myModule = {\n    filteredModuleData: uniqueConsensusData\n};\n';
 fs.writeFileSync(OUT, js.replace(/\r?\n/g, '\r\n'));
-console.log(`\nWrote ${path.relative(root, OUT)} (${(Buffer.byteLength(js) / 1024 / 1024).toFixed(2)} MB). Running the audit…\n`);
+console.log(`\nWrote ${CUSTOM_OUT ? OUT : path.relative(root, OUT)} (${(Buffer.byteLength(js) / 1024 / 1024).toFixed(2)} MB). Running the audit…\n`);
 
+if (CUSTOM_OUT) { console.log('(--out given: audit skipped, it checks the site\'s own data.js)'); process.exit(0) }
 const audit = spawnSync(process.execPath, [path.join(__dirname, 'audit-data.js')], { stdio: 'inherit' });
 process.exit(audit.status);

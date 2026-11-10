@@ -201,7 +201,7 @@ infrastructure, **P3** = nice to have.
 | T8 | P1 | ✅ **Done** (section 17): Gaps tab, a heatmap of any two dimensions with gaps highlighted | — |
 | T9 | P2 | ✅ **Done** (section 12): no requests to other servers | Works with network off |
 | T10 | P2 | ✅ Automated part done (0 axe violations; reflow at 400% zoom; see section 8). Remaining: sessions with real screen-reader users, shorter tour | Signed off by disabled testers |
-| T11 | P2 | ✅ **Done** (section 13): GitHub Actions runs the data audit and 66 browser checks on every push and pull request | CI green on every push |
+| T11 | P2 | ✅ **Done** (section 13): GitHub Actions runs lint, the data audit, 91 unit tests and 95 browser checks on every push and pull request (section 19) | CI green on every push |
 | T12 | P2 | ✅ **Done** (section 18): 10 focused script files, ESLint in CI, jQuery 3.7.1, grids from config | — |
 | T13 | P2 | ✅ Mostly done (section 14): unused files and dead code removed, README added. Remaining (owner's decisions): choose a project LICENSE, confirm the Highcharts licence, archive the old DataSpectra repo | — |
 | T14 | P2 | ✅ **Done.** Live on GitHub Pages | Public URL |
@@ -413,7 +413,7 @@ Run the same tests on your own computer (needs Node 18+ and Google Chrome):
 cd tools && npm ci && npm test
 ```
 
-### What is checked (66 checks)
+### What is checked (browser suite; see section 19 for the full list including unit tests)
 
 | Area | Checks |
 |---|---|
@@ -659,3 +659,40 @@ Verified:
 - The persona accessibility suite passes, with 0 axe violations.
 - The chart, table and Gaps feature scripts give the same results as before.
 - The data pipeline dry run shows 0 changes, and the lint is clean.
+
+## 19. Deep-dive test pass (2026-11-10)
+
+`cd tools && npm test` (and CI on every push) now runs **186 automated tests** plus lint and the data
+audit:
+
+| Suite | Tests | What it covers |
+|---|---|---|
+| `tools/unit-test.js` (no browser, ~3 s) | 91 | Answer matching and spelling normalisation (19); DOI cleaning and links (11); the search engine: phrases, OR, exclusions, accents, synonyms, word boundaries, ranking (19); invariants for all 216 studies: unique IDs and DOIs, plausible years, no reviewer data, no stray spaces or misspellings, numbers are numbers, every answer is a known option (13); filter menus = FILTER_SPECS = grids (7); **the data pipeline on made-up CSVs** (good input, BOM, quoted line breaks, duplicate IDs, Consensus-only, plus 8 kinds of broken input it must refuse, dry run, reproducibility), and the audit (22) |
+| `tools/ci-test.js` (headless Chrome) | 95 | Everything from sections 13–17, plus: each text filter against an independent count (title, single year, year range, spaced range, backwards range, pages, two authors, notes), invalid input, AND across tag + range + search, reset, the no-results message, paging (no overlap, page count, last page), Excel export contents, refusing an invalid import, HTML injection through the search box, no study dropped from any grid row, Ratings = Spectrum, chart totals and menu, the intensity legend, the skip link, Home/End/arrow keys on tabs, tooltip + Escape, dark mode on and off, the guided tour on a first visit, and every card's paper link |
+
+Expected values are computed from the raw data with separate, simple logic, never by calling the app's
+own filtering code, so a bug in the app can't hide behind a matching bug in the test.
+
+**Bugs found by the new tests and fixed:**
+1. **A year (or pages) range typed backwards, e.g. "2012-2010", returned 0 studies** instead of 28.
+   Ranges are now accepted either way round.
+2. **Reset left the old search summary on screen** ("26 studies found, best matches first") after
+   clearing the search.
+
+**The tests were tested.** Eight realistic bugs were put into the code one at a time (and removed
+again; files checked byte-for-byte afterwards):
+
+| Injected bug | Result |
+|---|---|
+| "ar" matching inside words like "research" | caught (unit) |
+| HTML escaping no longer escapes quotes | caught (unit) |
+| Pipeline stops making duplicate Study IDs unique | caught (unit) |
+| DOI cleaner keeps the first instead of the last DOI | **not caught at first**, so a test with two DOIs in one cell was added; now caught |
+| Spelling rule for "Asymetrical" removed | not caught, correctly: the "Symetrical" rule already covers it, so nothing breaks |
+| Backwards year range bug re-introduced | caught (browser) |
+| Paging off by one | caught by 3 tests |
+| A grid row silently drops "Mostly…" answers | caught by 2 tests ("Social vs. Solo: 147+33≠216") |
+
+The data pipeline also gained `--out=<file>`, so tests can build into a temporary file and never
+touch the real `data.js`. A rebuild from the September 2024 export is byte-identical to the live
+data (apart from the build-date line).

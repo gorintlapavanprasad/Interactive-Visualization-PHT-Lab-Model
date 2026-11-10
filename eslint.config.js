@@ -61,7 +61,7 @@ module.exports = [
       ecmaVersion: 2022,
       sourceType: 'commonjs',
       // Test code inside page.evaluate() runs in the browser and uses the app's globals.
-      globals: { ...globals.node, ...globals.browser, ...globals.jquery, Highcharts: 'readonly', XLSX: 'readonly', axe: 'readonly', ...appGlobals }
+      globals: { ...globals.node, ...globals.browser, ...globals.jquery, Highcharts: 'readonly', XLSX: 'readonly', axe: 'readonly', Shepherd: 'readonly', ...appGlobals }
     },
     rules: {
       ...js.configs.recommended.rules,

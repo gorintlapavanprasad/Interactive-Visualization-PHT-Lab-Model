@@ -59,11 +59,21 @@ it exits with code 1 if anything would make the dashboard miscount.
 index.html                 All markup: sidebar filters (3 hard-coded tag menus), 4 tabs,
                            two hard-coded 8×5 grids (Ratings, Spectrum), 2 modals
 assets/js/data.js          2 MB: one JS array of 216 study objects → window.myModule
-assets/js/script.js        All logic (~1.7k lines, globals, jQuery + Fomantic UI)
+assets/js/core.js          framework definitions, answer matching, DOIs, search engine (no DOM;
+                           also used by the data tools)
+assets/js/state.js         loads data.js, shared state, small utilities
+assets/js/shared.js        answer labels/ordering, viridis colours, contrast
+assets/js/filters.js       filtering, live option counts
+assets/js/chart.js         Plot tab
+assets/js/studies.js       Data tab (cards, table, details)
+assets/js/grids.js         Ratings + Spectrum tabs (grids built from SPECTRUM_ROWS)
+assets/js/gaps.js          Gaps tab
+assets/js/io.js            Excel export / import
+assets/js/app.js           start-up, theme, tabs, keyboard, tour (loaded last)
 assets/js/pagination.js    simplePagination jQuery plugin
 assets/css/style.css       Design tokens (--ds-*) for light/dark + all styling
 assets/vendor/             Highcharts 12.5 (+ accessibility, exporting, sonification),
-                           Fomantic/Semantic JS, jQuery 3.1.1, Shepherd (tour), SheetJS (XLSX)
+                           Fomantic/Semantic JS, jQuery 3.7.1, Shepherd (tour), SheetJS (XLSX)
 tools/audit-data.js        Data-consistency check (added 2026-11)
 ```
 
@@ -162,8 +172,7 @@ cross-checked independently against the raw data.
 9. Accessibility: axe now reports 0 WCAG 2.2 AA violations (section 8). Still open: manual testing
    with real NVDA, JAWS and VoiceOver users, a shorter tour, and Highcharts legend buttons that are
    17 px tall (they pass the spacing exception, but 24 px+ would be better).
-10. **Code health:** one global ~2k-line script, duplicated grid markup, jQuery 3.1.1 (2016, has
-    known security advisories), no linter. (Automated tests now exist; section 13.)
+10. ~~Code health~~ (fixed: split into 10 files, ESLint, jQuery 3.7.1, grids generated from one list; section 18).
 11. **Licensing to confirm:** Highcharts needs a paid licence unless the use is non-commercial
     (Highsoft's terms cover personal, school and non-profit use). Check with Highsoft or your
     university that this project qualifies. The project itself has no LICENSE file yet (the owner
@@ -193,7 +202,7 @@ infrastructure, **P3** = nice to have.
 | T9 | P2 | ✅ **Done** (section 12): no requests to other servers | Works with network off |
 | T10 | P2 | ✅ Automated part done (0 axe violations; reflow at 400% zoom; see section 8). Remaining: sessions with real screen-reader users, shorter tour | Signed off by disabled testers |
 | T11 | P2 | ✅ **Done** (section 13): GitHub Actions runs the data audit and 66 browser checks on every push and pull request | CI green on every push |
-| T12 | P2 | Code health: split `script.js` into modules, ESLint, upgrade jQuery, generate grid rows from config | — |
+| T12 | P2 | ✅ **Done** (section 18): 10 focused script files, ESLint in CI, jQuery 3.7.1, grids from config | — |
 | T13 | P2 | ✅ Mostly done (section 14): unused files and dead code removed, README added. Remaining (owner's decisions): choose a project LICENSE, confirm the Highcharts licence, archive the old DataSpectra repo | — |
 | T14 | P2 | ✅ **Done.** Live on GitHub Pages | Public URL |
 | T15 | P3 | Shareable URL with filter state; CSV and BibTeX export of the filtered studies; "insights" summary panel | — |
@@ -610,3 +619,43 @@ Some gaps visible straight away in the full data set:
 - No study is mostly or entirely chance-based.
 - Cognitive impairment and older adults are barely combined with most study methods.
 - No study recorded "Other" as its community of focus.
+
+## 18. Code health (2026-11-10)
+
+**One script → ten.** The 2,600-line `script.js` is split into ten files by job (see the layout in
+section 3). They are still plain scripts with no build step, loaded in a fixed order by
+`index.html`. They share one global scope, so nothing changed for the page.
+
+How the split was done:
+- A script cut `script.js` into its 133 top-level pieces (each function or statement with its comment).
+- It assigned each piece to a file by name, keeping the original order inside each file.
+- It refused to write unless every one of the 2,602 lines landed in exactly one file.
+
+The data tools now read the pure helpers from `core.js`. Adding a feature now usually touches one
+or two files.
+
+**ESLint** (`eslint.config.js` at the repo root, `cd tools && npm run lint`):
+- It uses the recommended rules, plus `===` instead of `==`. It runs in CI before the tests.
+- It knows about each file's top-level names, so it still flags names that are defined nowhere.
+- First run: one empty `else { }` block in the app, and an invisible byte-order-mark character
+  typed literally into a regular expression in `build-data.js`. Both are fixed. There were no
+  undefined variables and no `==` comparisons.
+- Note: ESLint had at first silently skipped the app folder (a config-location quirk). That was
+  caught and fixed, so the app files are checked now.
+
+**jQuery 3.1.1 → 3.7.1**, the latest 3.x release, with the security fixes:
+- It was fetched with `npm pack` (integrity checked against the npm registry).
+- The 3.5 change to self-closing tags affects none of our code or plugins.
+- jQuery 4 was not used because Fomantic UI 2.9 targets 3.x.
+
+**Grids from one list.** The Ratings and Spectrum tables used to be two identical hand-written copies
+(about 160 lines). Both are now built from `SPECTRUM_ROWS` in `grids.js`, which also defines the
+dimension order. `index.html` went from 1,054 to 892 lines. The data audit reads `SPECTRUM_ROWS`
+too, and it was shown to catch a broken label (a test edit to "Entirely Solo" was flagged for 98
+studies).
+
+Verified:
+- 66/66 CI checks pass.
+- The persona accessibility suite passes, with 0 axe violations.
+- The chart, table and Gaps feature scripts give the same results as before.
+- The data pipeline dry run shows 0 changes, and the lint is clean.

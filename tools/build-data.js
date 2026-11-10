@@ -39,7 +39,7 @@ if (!input) {
 // ---------------------------------------------------------------- helpers ----
 function parseCSV(text) {
   const rows = []; let row = [], field = '', quoted = false;
-  text = text.replace(/^﻿/, '');
+  text = text.replace(/^\uFEFF/, '');
   for (let i = 0; i < text.length; i++) {
     const c = text[i];
     if (quoted) {
@@ -58,14 +58,12 @@ function parseCSV(text) {
 }
 
 // Pure helpers shared with the app (normalizeDoi, FILTER_SPECS), loaded from the
-// top section of script.js so the website and the pipeline can never disagree.
+// assets/js/core.js, so the website and the pipeline can never disagree.
 function loadAppHelpers() {
-  const src = fs.readFileSync(path.join(root, 'assets/js/script.js'), 'utf8');
-  const end = src.indexOf('var LOOKUP_CACHE');
-  if (end < 0) throw new Error('Could not find the helper section in assets/js/script.js');
+  const src = fs.readFileSync(path.join(root, 'assets/js/core.js'), 'utf8');
   const ctx = {};
   vm.createContext(ctx);
-  vm.runInContext(src.slice(0, end) + '\n;this.FILTER_SPECS=FILTER_SPECS;this.normalizeDoi=normalizeDoi;', ctx);
+  vm.runInContext(src + '\n;this.FILTER_SPECS=FILTER_SPECS;this.normalizeDoi=normalizeDoi;', ctx);
   return ctx;
 }
 
@@ -106,7 +104,7 @@ for (const group of Object.values(helpers.FILTER_SPECS)) for (const col of Objec
 const missing = [...required].filter(c => !header.includes(c));
 if (missing.length) {
   console.error('Missing columns the dashboard needs:\n  ' + missing.join('\n  '));
-  console.error('Was the Covidence extraction template changed? Update FILTER_SPECS in assets/js/script.js to match.');
+  console.error('Was the Covidence extraction template changed? Update FILTER_SPECS in assets/js/core.js to match.');
   process.exit(1);
 }
 

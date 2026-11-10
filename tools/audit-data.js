@@ -7,7 +7,7 @@
  *     node tools/audit-data.js
  *
  * It uses the dashboard's own matching rules (FILTER_SPECS, canon(),
- * splitValues() from assets/js/script.js) and the grid cells in index.html,
+ * splitValues() from assets/js/core.js) and the grid cells in index.html,
  * and reports anything that would make the dashboard silently miscount:
  *   - filter options that match no study,
  *   - data answers that no filter option / grid cell can reach,
@@ -27,22 +27,20 @@ vm.createContext(dataCtx);
 vm.runInContext(read('assets/js/data.js'), dataCtx);
 const rows = dataCtx.window.myModule.filteredModuleData;
 
-// --- load the pure helper section at the top of script.js (no DOM needed) ---
-const script = read('assets/js/script.js');
-const pureEnd = script.indexOf('var LOOKUP_CACHE');
-if (pureEnd < 0) throw new Error('Could not find helper section in script.js');
+// --- load the app's pure helpers (assets/js/core.js, no DOM needed) ---
 const helperCtx = {};
 vm.createContext(helperCtx);
-vm.runInContext(script.slice(0, pureEnd) + '\n;this.FILTER_SPECS=FILTER_SPECS;this.canon=canon;this.splitValues=splitValues;this.normalizeDoi=normalizeDoi;', helperCtx);
+vm.runInContext(read('assets/js/core.js') + '\n;this.FILTER_SPECS=FILTER_SPECS;this.canon=canon;this.splitValues=splitValues;this.normalizeDoi=normalizeDoi;', helperCtx);
 const { FILTER_SPECS, canon, splitValues, normalizeDoi } = helperCtx;
 
-// --- grid cells from index.html ---
-const html = read('index.html');
+// --- grid cells: SPECTRUM_ROWS in assets/js/grids.js (both grids are built from it) ---
+const gridSrc = read('assets/js/grids.js');
+const rowsMatch = gridSrc.match(/const SPECTRUM_ROWS = (\[[\s\S]*?\n\]);/);
+if (!rowsMatch) throw new Error('Could not find SPECTRUM_ROWS in assets/js/grids.js');
+const SPECTRUM_ROWS = vm.runInNewContext(rowsMatch[1]);
 const gridCells = {}; // dimension -> Set(canon(label))
-for (const m of html.matchAll(/<tr data-row=["']([^"']+)["']>([\s\S]*?)<\/tr>/g)) {
-  const set = gridCells[m[1]] || (gridCells[m[1]] = new Set());
-  for (const c of m[2].matchAll(/data-column="([^"]+)"/g)) set.add(canon(c[1]));
-}
+for (const r of SPECTRUM_ROWS) gridCells[r.dim] = new Set(r.cells.map(canon));
+if (Object.keys(gridCells).length !== 8) throw new Error('Expected 8 spectrum rows, found ' + Object.keys(gridCells).length);
 
 let problems = 0;
 const section = (t) => console.log(`\n=== ${t} ===`);

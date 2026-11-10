@@ -3,6 +3,7 @@
   "private": true,
   "description": "Data pipeline, audit and automated tests for the PHT Lab dashboard",
   "scripts": {
+    "lint": "cd .. && eslint .",
     "test": "node audit-data.js && node ci-test.js",
     "test:update-golden": "node ci-test.js --update-golden",
     "build-data": "node build-data.js",
@@ -12,6 +13,8 @@
   },
   "devDependencies": {
     "axe-core": "^4.14.0",
+    "eslint": "^9.39.5",
+    "globals": "^15.15.0",
     "puppeteer-core": "^23.0.0"
   }
 }

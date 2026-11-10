@@ -70,11 +70,21 @@ page size and speed. They run automatically in GitHub Actions. Details are in `P
 
 ```
 index.html                 the page
-assets/js/script.js        all app logic
+assets/js/core.js          framework definitions, answer matching, DOIs, search engine (no DOM;
+                           also used by the data tools)
+assets/js/state.js         loads data.js, shared state, small utilities
+assets/js/shared.js        answer labels/ordering, viridis colours, contrast
+assets/js/filters.js       filtering, live option counts
+assets/js/chart.js         Plot tab
+assets/js/studies.js       Data tab (cards, table, details)
+assets/js/grids.js         Ratings + Spectrum tabs (grids built from SPECTRUM_ROWS)
+assets/js/gaps.js          Gaps tab
+assets/js/io.js            Excel export / import
+assets/js/app.js           start-up, theme, tabs, keyboard, tour (loaded last)
 assets/js/data.js          GENERATED study data — don't edit; use tools/build-data.js
 assets/css/style.css       styles (light/dark design tokens)
 assets/vendor/             Highcharts 12.5, Fomantic UI 2.9.3, Phosphor Icons 2.1.1,
-                           jQuery 3.1.1, Shepherd.js, SheetJS
+                           jQuery 3.7.1, Shepherd.js, SheetJS
 media/                     images
 tools/                     data pipeline, audit, tests
 PROJECT_GUIDE.md           full documentation: data, decisions, history, roadmap
@@ -88,6 +98,6 @@ PROJECT_GUIDE.md           full documentation: data, decisions, history, roadmap
 | [Fomantic UI](https://fomantic-ui.com/) 2.9.3 | MIT (`assets/vendor/cdn-local/css/FOMANTIC-LICENSE.md`) |
 | [Phosphor Icons](https://phosphoricons.com/) 2.1.1 | MIT (`assets/vendor/phosphor-icons-2.1.1/LICENSE`) |
 | Lato font | SIL Open Font License 1.1 |
-| jQuery 3.1.1, Shepherd.js 10.0.1 | MIT (jQuery 3.1.1 has known security advisories; upgrading is task T12) |
+| jQuery 3.7.1, Shepherd.js 10.0.1 | MIT |
 | SheetJS Community Edition (xlsx) | Apache-2.0 |
 | [axe-core](https://github.com/dequelabs/axe-core), puppeteer-core (tests only) | MPL-2.0 / Apache-2.0 |

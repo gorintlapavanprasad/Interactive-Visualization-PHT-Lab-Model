@@ -304,6 +304,59 @@ function doiUrl(doi) {
 }
 
 // ---------------------------------------------------------------------------
+// CSV and BibTeX export (pure; the download buttons live in io.js)
+// ---------------------------------------------------------------------------
+// One CSV cell: quoted when needed. Text starting with = + @ (or - followed by
+// a non-number) is prefixed with ' so spreadsheets don't run it as a formula.
+function csvCell(value) {
+    if (value == null) return '';
+    if (typeof value === 'number') return String(value);
+    let s = String(value);
+    if (/^[=+@\t\r]/.test(s) || /^-[^\d.]/.test(s)) s = "'" + s;
+    return /[",\n\r]/.test(s) || /^\s|\s$/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s
+}
+
+function toCsv(rows, columns) {
+    const cols = columns || (rows[0] ? Object.keys(rows[0]) : []);
+    return [cols.map(csvCell).join(','), ...rows.map(r => cols.map(c => csvCell(r[c])).join(','))].join('\r\n') + '\r\n'
+}
+
+const BIBTEX_SPECIAL = { '\\': '\\textbackslash{}', '{': '\\{', '}': '\\}', '&': '\\&', '%': '\\%', '$': '\\$', '#': '\\#', '_': '\\_', '~': '\\textasciitilde{}', '^': '\\textasciicircum{}' };
+function bibtexEscape(value) {
+    return String(value ?? '').replace(/\s+/g, ' ').trim().replace(/[\\{}&%$#_~^]/g, c => BIBTEX_SPECIAL[c])
+}
+
+// Citation keys from Study IDs ("Ostiz-Blanco 2018a" -> "OstizBlanco2018a"), made unique.
+function bibtexKeys(rows) {
+    const used = new Map();
+    return rows.map(r => {
+        // Keep the capitals, drop accents and anything that isn't a letter or digit.
+        const base = String(r['Study ID'] || 'Study').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/gi, '') || 'Study';
+        const n = (used.get(base) || 0) + 1;
+        used.set(base, n);
+        return n === 1 ? base : base + '_' + n
+    })
+}
+
+// BibTeX for the given studies. The review records only the lead author and the
+// number of pages, so entries are @misc with a DOI link and a note saying so.
+function toBibtex(rows) {
+    const keys = bibtexKeys(rows);
+    return rows.map((r, i) => {
+        const fields = [
+            ['title', '{' + bibtexEscape(r.Title) + '}'],
+            ['author', bibtexEscape(r['Lead author contact details'])],
+            ['year', r.Year],
+            ['doi', bibtexEscape(r.DOI)],
+            ['url', r.DOI ? doiUrl(r.DOI) : ''],
+            ['pagetotal', typeof r.Pages === 'number' ? r.Pages : ''],
+            ['note', 'Lead author only; see the DOI for the full reference']
+        ].filter(([, v]) => v !== '' && v != null);
+        return '@misc{' + keys[i] + ',\n' + fields.map(([k, v]) => '  ' + k + ' = {' + v + '}').join(',\n') + '\n}'
+    }).join('\n\n') + '\n'
+}
+
+// ---------------------------------------------------------------------------
 // "Search all fields" — one box that searches every column of every study.
 //   blind game            → studies containing BOTH words (any field, any case)
 //   "virtual reality"     → exact phrase

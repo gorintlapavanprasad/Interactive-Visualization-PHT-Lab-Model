@@ -18,7 +18,8 @@ Researchers use it to:
 - **Browse** study cards (Data tab) and open study details.
 - See **where studies sit on each spectrum**: the Ratings tab (dot grid) and the Spectrum tab (heat grid).
   Clicking a cell lists its studies and jumps to them.
-- **Export** the filtered set plus filter settings to XLSX, and **import** a saved filter set back in.
+- **Share** a view by link, **download** the filtered studies as CSV or BibTeX, and **export/import**
+  them with all settings as XLSX.
 
 **Data sensitivity:** published bibliographic metadata (titles, DOIs, lead-author names, coded ratings,
 aggregate participant counts). No student records, health records or personal data beyond public
@@ -68,7 +69,8 @@ assets/js/chart.js         Plot tab
 assets/js/studies.js       Data tab (cards, table, details)
 assets/js/grids.js         Ratings + Spectrum tabs (grids built from SPECTRUM_ROWS)
 assets/js/gaps.js          Gaps tab
-assets/js/io.js            Excel export / import
+assets/js/io.js            Excel export / import, CSV and BibTeX downloads
+assets/js/share.js         shareable links (view state in the address) and Copy link
 assets/js/app.js           start-up, theme, tabs, keyboard, tour (loaded last)
 assets/js/pagination.js    simplePagination jQuery plugin
 assets/css/style.css       Design tokens (--ds-*) for light/dark + all styling
@@ -201,11 +203,11 @@ infrastructure, **P3** = nice to have.
 | T8 | P1 | ✅ **Done** (section 17): Gaps tab, a heatmap of any two dimensions with gaps highlighted | — |
 | T9 | P2 | ✅ **Done** (section 12): no requests to other servers | Works with network off |
 | T10 | P2 | ✅ Automated part done (0 axe violations; reflow at 400% zoom; see section 8). Remaining: sessions with real screen-reader users, shorter tour | Signed off by disabled testers |
-| T11 | P2 | ✅ **Done** (section 13): GitHub Actions runs lint, the data audit, 91 unit tests and 95 browser checks on every push and pull request (section 19) | CI green on every push |
+| T11 | P2 | ✅ **Done** (section 13): GitHub Actions runs lint, the data audit, 102 unit tests and 105 browser checks on every push and pull request (sections 19–20) | CI green on every push |
 | T12 | P2 | ✅ **Done** (section 18): 10 focused script files, ESLint in CI, jQuery 3.7.1, grids from config | — |
 | T13 | P2 | ✅ Mostly done (section 14): unused files and dead code removed, README added. Remaining (owner's decisions): choose a project LICENSE, confirm the Highcharts licence, archive the old DataSpectra repo | — |
 | T14 | P2 | ✅ **Done.** Live on GitHub Pages | Public URL |
-| T15 | P3 | Shareable URL with filter state; CSV and BibTeX export of the filtered studies; "insights" summary panel | — |
+| T15 | P3 | ✅ **Done** (section 20): shareable links + Copy link; CSV and BibTeX downloads. Remaining idea: an "insights" summary panel | — |
 
 **Suggested order:** T1 (put the fixes live) → T2/T3 → T4 → T9 → T11 → T6–T8 → the rest.
 
@@ -696,3 +698,54 @@ again; files checked byte-for-byte afterwards):
 The data pipeline also gained `--out=<file>`, so tests can build into a temporary file and never
 touch the real `data.js`. A rebuild from the September 2024 export is byte-identical to the live
 data (apart from the build-date line).
+
+## 20. Share links, CSV and BibTeX (2026-11-10)
+
+**Shareable links.** The address bar always describes the current view, so it can be copied,
+bookmarked or cited. It records:
+- the tab
+- the tags in all three menus
+- the search box and the text filters
+- the chart's x-axis, colour and count/% choice
+- the study list's view, sort, page size and table columns
+- the Gaps settings
+
+Example: `…/#tab=gaps&f2=study_interview&q=blind&gr=Technology+Modality&gc=Context`.
+
+- The **Copy link** button (top right) copies that link and confirms it on screen and to screen
+  readers ("Link to this view copied."). If the browser blocks clipboard access, the link is shown so
+  it can be copied by hand.
+- Default settings are left out, so the default view has a clean address.
+- The address is updated in place (no extra Back-button steps). Pasting another link into the same
+  tab applies it.
+- Unknown or out-of-date values in a link are ignored (e.g. a renamed column), so old links degrade
+  gracefully.
+
+**Downloads** (Data tab toolbar):
+- **CSV** (opens in Excel and other spreadsheets) and **BibTeX** (reference managers, LaTeX).
+- Both contain the filtered studies, in the order shown.
+- CSV: all 175 columns, UTF-8 with a byte-order mark so Excel shows accents correctly, correct
+  quoting, and a guard against spreadsheet-formula injection (a cell starting with `=`, `+`, `@` …
+  is prefixed with `'`).
+- BibTeX: one `@misc` entry per study with title (capitalisation kept), lead author, year, DOI, URL
+  and page count. LaTeX special characters are escaped. Citation keys come from the Study ID
+  (`OstizBlanco2018a`) and are unique. A note says only the lead author is recorded, because that's
+  all the review captured.
+
+**Bugs found while testing this and fixed:**
+1. Opening a link restored everything **except the tab**: the link was applied before the tab system
+   was set up. Links are now applied last during start-up.
+2. Opening a link (or any scripted tab change) into the Data tab in Table view showed the card-only
+   "Hide fields" control. The five tabs had inline `onclick` handlers that ran in a different order
+   for scripted clicks. They're removed: the visible tab now decides the header control in one place.
+   A new test opens every tab by link and by click; it was shown to fail when the old handler was
+   put back.
+3. The editor had written two invisible characters into source files (combining-mark ranges and
+   byte-order marks in regular expressions). They're replaced with `\u` escapes, and a new unit test
+   fails if any source file contains invisible characters.
+
+Tests added: 10 unit tests (CSV quoting, formula guard, round trip through a CSV parser, BibTeX
+escaping, keys, all 216 studies) and 10 browser tests (clean default address, what the link
+records, **full round trip in a fresh browser: identical studies, tab and settings**, Copy link,
+unsafe link values, pasted links, CSV and BibTeX contents vs the filtered studies, the empty case,
+the header control per tab). Total: **207 tests**.

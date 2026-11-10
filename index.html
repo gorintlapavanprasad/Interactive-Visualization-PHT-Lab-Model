@@ -574,23 +574,23 @@
         <div class="ui grid page-header">
           <div class="nine wide computer sixteen wide mobile column">
             <div class="ui top attached tabular menu mx-auto" id="myTab" role="tablist">
-              <a class="item active" data-tab="Show-plot" id="Show-plot" onclick="animateOptions('plot')" role="tab"
+              <a class="item active" data-tab="Show-plot" id="Show-plot" role="tab"
                 aria-selected="true" aria-controls="show-plot-pane" tabindex="0">
                 <i class="ph ph-chart-bar"></i> Plot
               </a>
-              <a class="item" data-tab="Show-data" id="Show-data" onclick="animateOptions('plotFilter')" role="tab"
+              <a class="item" data-tab="Show-data" id="Show-data" role="tab"
                 aria-selected="false" aria-controls="Show-data-pane" tabindex="0">
                 <i class="ph ph-rows-plus-bottom"></i> Data
               </a>
-              <a class="item" data-tab="ratings-grid" id="ratings-grid" onclick="animateOptions('hide')" role="tab"
+              <a class="item" data-tab="ratings-grid" id="ratings-grid" role="tab"
                 aria-selected="false" aria-controls="ratings-pane" tabindex="0">
                 <i class="ph ph-chart-scatter"></i> Ratings
               </a>
-              <a class="item" data-tab="Show-grid" id="Show-grid" onclick="animateOptions('hide')" role="tab"
+              <a class="item" data-tab="Show-grid" id="Show-grid" role="tab"
                 aria-selected="false" aria-controls="Show-grid-pane" tabindex="0">
                 <i class="ph ph-grid-nine"></i> Spectrum
               </a>
-              <a class="item" data-tab="Show-gaps" id="Show-gaps" onclick="animateOptions('hide')" role="tab"
+              <a class="item" data-tab="Show-gaps" id="Show-gaps" role="tab"
                 aria-selected="false" aria-controls="Show-gaps-pane" tabindex="-1">
                 <i class="ph ph-squares-four"></i> Gaps
               </a>
@@ -627,6 +627,10 @@
 
           <div class="three wide computer eight wide tablet column position-relative switchContainer">
 
+            <button type="button" class="ui button copy-link" id="copyLink">
+              <i class="ph ph-link" aria-hidden="true"></i> <span class="copy-label">Copy link</span>
+              <span class="sr-only"> to this view (filters, tab and settings)</span>
+            </button>
             <div class="hover-nav-container">
               <button class="ui button hover-nav-trigger" aria-haspopup="true" aria-expanded="false"
                 aria-label="More options">
@@ -735,6 +739,14 @@
               <div class="chart-control narrow">
                 <label for="pageSize">Per page</label>
                 <select id="pageSize"></select>
+              </div>
+              <div class="download-buttons" role="group" aria-label="Download the filtered studies">
+                <button type="button" class="ui button" id="downloadCsv" onclick="exportCsv()">
+                  <i class="ph ph-file-csv" aria-hidden="true"></i> CSV
+                </button>
+                <button type="button" class="ui button" id="downloadBib" onclick="exportBibtex()">
+                  <i class="ph ph-quotes" aria-hidden="true"></i> BibTeX
+                </button>
               </div>
               <details class="column-chooser" hidden>
                 <summary>Columns</summary>
@@ -875,7 +887,7 @@
   <script src="assets/vendor/cdn-local/js/xlsx.full.min.js"></script>
 
   <!-- App scripts (plain scripts sharing one global scope; order matters):
-       core -> state -> shared -> filters -> chart -> studies -> grids -> gaps -> io -> app -->
+       core -> state -> shared -> filters -> chart -> studies -> grids -> gaps -> io -> share -> app -->
   <script src="assets/js/core.js"></script>
   <script src="assets/js/state.js"></script>
   <script src="assets/js/shared.js"></script>
@@ -885,6 +897,7 @@
   <script src="assets/js/grids.js"></script>
   <script src="assets/js/gaps.js"></script>
   <script src="assets/js/io.js"></script>
+  <script src="assets/js/share.js"></script>
   <script src="assets/js/app.js"></script>
 
 </body>

@@ -202,6 +202,7 @@ function doInitialization() {
     initGapControls();
     renderTable(csvData);
     updateFilterCounts(csvData, {});
+    initShareLinks();
     setTimeout(getPlot, 100);
     const hasSeenTour = localStorage.getItem('pht_lab_tour_seen');
     if (hasSeenTour === null || hasSeenTour === 'false') {
@@ -251,8 +252,10 @@ document.addEventListener("DOMContentLoaded", () => {
             // Draw whatever became stale while this tab was hidden.
             renderVisibleViews(tabPath);
             if (tabPath === 'Show-plot' && plotState.chart) plotState.chart.reflow();
-            // The card field hider only makes sense in Cards view.
-            if (tabPath === 'Show-data') animateOptions(dataView === 'cards' ? 'plotFilter' : 'hide');
+            // Header control for the visible tab: chart picker on Plot, card field
+            // hider on Data (Cards view only), nothing elsewhere. Decided here only,
+            // so it is right however the tab was opened (click, keyboard, shared link).
+            animateOptions(tabPath === 'Show-plot' ? 'plot' : (tabPath === 'Show-data' && dataView === 'cards') ? 'plotFilter' : 'hide');
             affirmByPath(tabPath)
         }
     });
@@ -300,7 +303,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 input.reportValidity()
             }
         })
-    })
+    });
+    // Opened from a shared link? Apply it last, once the tabs are set up.
+    applyShareState(location.hash)
 });
 
 function startGuidedTour() {

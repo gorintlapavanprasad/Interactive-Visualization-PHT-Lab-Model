@@ -3626,3 +3626,41 @@ ul li {
     margin-left: 16px;
     background: linear-gradient(to right, #482173, #2c728e, #28ae80, #fde725)
 }
+
+/* Copy link + download buttons */
+.switchContainer {
+    gap: 8px;
+    align-items: center
+}
+
+.copy-link.ui.button,
+.download-buttons .ui.button {
+    min-height: 36px;
+    margin: 0;
+    border: 1px solid var(--ds-border-strong, #64748b);
+    background: var(--ds-bg-panel, #fff);
+    color: var(--ds-text-primary, #0f172a);
+    white-space: nowrap
+}
+
+.copy-link.copied {
+    border-color: #15803d !important;
+    color: #15803d !important
+}
+
+[data-theme="dark"] .copy-link.copied {
+    border-color: #86efac !important;
+    color: #86efac !important
+}
+
+.download-buttons {
+    display: inline-flex;
+    gap: 6px;
+    align-self: flex-end
+}
+
+.copy-link.ui.button:focus-visible,
+.download-buttons .ui.button:focus-visible {
+    outline: 3px solid var(--ds-focus-ring, #2563eb);
+    outline-offset: 2px
+}

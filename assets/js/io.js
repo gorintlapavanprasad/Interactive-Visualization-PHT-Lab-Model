@@ -109,3 +109,33 @@ function handleDataImport(e) {
     reader.readAsArrayBuffer(file)
 }
 
+// ---------------------------------------------------------------------------
+// Downloads of the filtered studies, in the order shown in the study list.
+// ---------------------------------------------------------------------------
+function downloadText(filename, text, mime) {
+    const blob = new Blob([text], { type: mime });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    downloadText.last = { filename, text, mime }; // for the automated tests
+    announce(`Downloaded ${filename}.`)
+}
+
+const today = () => new Date().toISOString().slice(0, 10);
+
+function exportCsv() {
+    const rows = sortedRows();
+    if (!rows.length) return alert('No studies to export.');
+    // BOM so Excel opens accented names (Sánchez, Jesús) correctly
+    downloadText(`pht-lab-studies-${today()}.csv`, '\uFEFF' + toCsv(rows, Object.keys(csvData[0])), 'text/csv;charset=utf-8')
+}
+
+function exportBibtex() {
+    const rows = sortedRows();
+    if (!rows.length) return alert('No studies to export.');
+    downloadText(`pht-lab-studies-${today()}.bib`, toBibtex(rows), 'application/x-bibtex;charset=utf-8')
+}

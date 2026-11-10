@@ -429,7 +429,7 @@ async function collectGolden(page) {
       allFilters = { second: 'study_interview' }; applyFilters();
       await setText('YearFilter', '2015-2023'); await setText('globalSearch', 'blind');
       const blindRe = /(^|[^a-z0-9])(blind|blv|visually impaired|visual impairment)/i;
-      out.combined = { got: n(), want: csvData.filter(r => has(r['Study Method'], 'Interview') && r.Year >= 2015 && r.Year <= 2023 && Object.values(r).some(v => blindRe.test(String(v).normalize('NFD').replace(/[̀-ͯ]/g, '')))).length };
+      out.combined = { got: n(), want: csvData.filter(r => has(r['Study Method'], 'Interview') && r.Year >= 2015 && r.Year <= 2023 && Object.values(r).some(v => blindRe.test(String(v).normalize('NFD').replace(/[\u0300-\u036f]/g, '')))).length };
       // reset clears everything
       applyFilters('reset'); await wait(60);
       out.reset = { results: n(), texts: ['titleFilter', 'authorFilter', 'YearFilter', 'PagesFilter', 'NotesFilter', 'globalSearch'].map(id => document.getElementById(id).value).join(''), tags: ['.firstDropdown', '.secondDropdown', '.thirdDropdown'].map(s => $(s).dropdown('get value')).join(''), status: document.getElementById('globalSearch-status').textContent, error: document.getElementById('YearFilter-error')?.textContent || '' };
@@ -592,6 +592,120 @@ async function collectGolden(page) {
     await page2.close();
 
     // -------------------------------------------------------------- a11y ----
+    // ------------------------------------------------- share links, downloads ----
+    console.log('\nshare links and downloads');
+    {
+      const origin = new URL(base).origin;
+      await browser.defaultBrowserContext().overridePermissions(origin, ['clipboard-read', 'clipboard-write', 'clipboard-sanitized-write']);
+      const A = await openPage(browser, base);
+      // the default view keeps a clean address
+      await A.evaluate(() => { applyFilters('reset'); document.body.click() });
+      await sleep(500);
+      const cleanHash = await A.evaluate(() => location.hash);
+      // build a complex view through the real controls/state
+      await A.evaluate(async () => {
+        const wait = ms => new Promise(r => setTimeout(r, ms));
+        $('.secondDropdown').dropdown('set selected', 'study_interview'); await wait(50);
+        $('.firstDropdown').dropdown('set selected', 'solo_entirely'); await wait(50);
+        const set = (id, v) => { const el = document.getElementById(id); el.value = v; el.dispatchEvent(new Event(el.tagName === 'SELECT' ? 'change' : 'input', { bubbles: true })) };
+        set('globalSearch', 'blind'); set('YearFilter', '2005-2023'); await wait(300);
+        $('#plotFilter').dropdown('set selected', 'Study Method');
+        set('stackBy', 'Community of focus'); set('plotMode', 'percent');
+        $('#myTab .item[data-tab="Show-data"]').trigger('click'); await wait(100);
+        document.querySelector('.view-toggle [data-view="table"]').click(); await wait(50);
+        document.querySelector('#studyTable .sort-button[data-col="Year"]').click(); await wait(50);
+        set('pageSize', '50');
+        set('gapRows', 'Technology Modality'); set('gapCols', 'Context'); set('gapMode', 'row');
+        const hide = document.getElementById('gapHideNA'); hide.checked = false; hide.dispatchEvent(new Event('change', { bubbles: true }));
+        $('#myTab .item[data-tab="Show-gaps"]').trigger('click'); await wait(100);
+        document.body.click();
+      });
+      await sleep(600);
+      const snap = p => p.evaluate(() => ({
+        uids: filteredDataTmp.map(r => r.__uid).join(','), tab: document.querySelector('#myTab .item.active')?.getAttribute('data-tab'),
+        filters: JSON.stringify(['first', 'second', 'third'].map(g => allFilters[g] || '')), search: document.getElementById('globalSearch').value, year: document.getElementById('YearFilter').value,
+        x: $('#plotFilter').dropdown('get value'), stack: document.getElementById('stackBy').value, mode: document.getElementById('plotMode').value,
+        view: dataView, sort: sortState.col + ' ' + sortState.dir, per: pageSizes[dataView],
+        gaps: ['gapRows', 'gapCols', 'gapMode'].map(id => document.getElementById(id).value).concat(document.getElementById('gapHideNA').checked).join('|')
+      }));
+      const before = await snap(A);
+      const url = await A.evaluate(() => location.href);
+      // Copy link puts exactly this URL on the clipboard
+      await A.click('#copyLink');
+      await sleep(300);
+      const copy = await A.evaluate(async () => ({ clip: await navigator.clipboard.readText().catch(e => 'ERR ' + e.message), href: location.href, label: document.querySelector('#copyLink .copy-label').textContent }));
+      // downloads of the current (filtered, sorted) studies
+      const dl = await A.evaluate(async () => {
+        const wait = ms => new Promise(r => setTimeout(r, ms));
+        const rows = sortedRows();
+        exportCsv(); const csv = downloadText.last;
+        const parsed = XLSX.utils.sheet_to_json(XLSX.read(csv.text.replace(/^\uFEFF/, ''), { type: 'string' }).Sheets.Sheet1, { defval: '' });
+        exportBibtex(); const bib = downloadText.last;
+        const keys = [...bib.text.matchAll(/^@misc\{([^,]+),/gm)].map(m => m[1]);
+        const dois = [...bib.text.matchAll(/doi = \{([^}]*)\}/g)].map(m => m[1].replace(/\\_/g, '_'));
+        // nothing to export -> a message instead of an empty file
+        document.getElementById('globalSearch').value = 'zzzqqqxx'; applyFilters(); await wait(50);
+        let alerted = ''; const oa = window.alert; window.alert = m => { alerted = m }; downloadText.last = null; exportCsv(); window.alert = oa;
+        return {
+          csv: { name: csv.filename, bom: csv.text.charCodeAt(0) === 0xFEFF, rows: parsed.length, want: rows.length, sameOrder: parsed.map(r => r.Title).join('|') === rows.map(r => r.Title).join('|'), cols: Object.keys(parsed[0] || {}).length, wantCols: Object.keys(csvData[0]).length },
+          bib: { name: bib.filename, entries: keys.length, unique: new Set(keys).size, want: rows.length, doisMatch: dois.join() === rows.filter(r => r.DOI).map(r => r.DOI).join() },
+          empty: { alerted, wrote: !!downloadText.last }
+        };
+      });
+      // open the link in a brand-new page: same studies, tab and settings
+      const B = await browser.newPage();
+      await B.setViewport({ width: 1440, height: 900 });
+      const errsB = []; B.on('pageerror', e => errsB.push(e.message));
+      await B.evaluateOnNewDocument(() => { localStorage.setItem('pht_lab_tour_seen', 'true'); localStorage.removeItem('pht_data_view') });
+      await B.goto(url, { waitUntil: 'networkidle0' });
+      await B.waitForFunction(() => window.plotState && document.querySelector('.currentRecords')?.textContent, { timeout: 30000 });
+      await sleep(500);
+      const after = await snap(B);
+      const diff = Object.keys(before).filter(k => before[k] !== after[k]);
+      // a link with bad values is handled safely
+      await B.goto(base + '#f2=study_interview,not_a_token&x=NoSuchColumn&pp=999&tab=nope&cb=bogus', { waitUntil: 'networkidle0' });
+      await B.reload({ waitUntil: 'networkidle0' });
+      await sleep(500);
+      const bad = await B.evaluate(() => ({ n: filteredDataTmp.length, tab: document.querySelector('#myTab .item.active')?.getAttribute('data-tab'), x: $('#plotFilter').dropdown('get value'), stack: document.getElementById('stackBy').value, per: pageSizes[dataView] }));
+      const want92 = await B.evaluate(() => csvData.filter(r => String(r['Study Method']).split(';').map(x => x.trim()).includes('Interview')).length);
+      // pasting another link into the same tab applies it
+      await B.evaluate(() => { location.hash = 'q=autism' });
+      await sleep(600);
+      const pasted = await B.evaluate(() => ({ n: filteredDataTmp.length, box: document.getElementById('globalSearch').value }));
+      check('default view keeps a clean address (no #…)', cleanHash === '', cleanHash);
+      check('the address bar records tags, search, filters, chart, table, Gaps and tab', /f2=study_interview/.test(url) && /q=blind/.test(url) && /tab=gaps/.test(url) && /dv=table/.test(url) && /gr=Technology/.test(url), url.replace(/^[^#]*/, ''));
+      check('opening the link in a new browser restores exactly the same view', diff.length === 0 && !errsB.length, diff.map(k => `${k}: ${before[k]} → ${after[k]}`).join('; ') + errsB.join('; '));
+      check('"Copy link" copies the current view\'s link and confirms it', copy.clip === copy.href && /copied/i.test(copy.label), JSON.stringify(copy).slice(0, 200));
+      check('a link with unknown values is handled safely (bad parts ignored)', bad.n === want92 && bad.tab === 'Show-plot' && bad.x === 'Year' && bad.stack === 'Participant Groups' && bad.per === 5, JSON.stringify(bad));
+      check('pasting a new link into the tab applies it', pasted.box === 'autism' && pasted.n > 0 && pasted.n < 216, JSON.stringify(pasted));
+      check('CSV download: every filtered study in display order, all columns, Excel-friendly', dl.csv.rows === dl.csv.want && dl.csv.want > 0 && dl.csv.sameOrder && dl.csv.cols === dl.csv.wantCols && dl.csv.bom && /\.csv$/.test(dl.csv.name), JSON.stringify(dl.csv));
+      check('BibTeX download: one entry per filtered study, unique keys, matching DOIs', dl.bib.entries === dl.bib.want && dl.bib.unique === dl.bib.want && dl.bib.doisMatch && /\.bib$/.test(dl.bib.name), JSON.stringify(dl.bib));
+      check('nothing to download -> a message, not an empty file', /No studies/.test(dl.empty.alerted) && !dl.empty.wrote, JSON.stringify(dl.empty));
+      await A.close();
+      await B.close();
+    }
+
+    // header control per tab, however the tab was opened (link or click)
+    {
+      const shown = p => p.evaluate(() => ({ chart: document.querySelector('.plotOptionsDiv').classList.contains('expand'), hider: document.querySelector('.plotFilterMultiSelect').classList.contains('expand') }));
+      const results = [];
+      for (const [hash, want] of [['#tab=data', { chart: false, hider: true }], ['#tab=data&dv=table', { chart: false, hider: false }], ['#tab=gaps', { chart: false, hider: false }], ['#tab=spectrum', { chart: false, hider: false }], ['', { chart: true, hider: false }]]) {
+        const p = await openPage(browser, base + hash);
+        await sleep(300);
+        const got = await shown(p);
+        results.push({ hash: hash || '(none)', ok: got.chart === want.chart && got.hider === want.hider, got });
+        if (hash === '') {
+          for (const [id, w] of [['#Show-data', { chart: false, hider: true }], ['#Show-gaps', { chart: false, hider: false }], ['#Show-plot', { chart: true, hider: false }]]) {
+            await p.click(id); await sleep(300);
+            const g = await shown(p);
+            results.push({ hash: 'click ' + id, ok: g.chart === w.chart && g.hider === w.hider, got: g });
+          }
+        }
+        await p.close();
+      }
+      check('header shows the right control for each tab, via links and clicks', results.every(r => r.ok), JSON.stringify(results.filter(r => !r.ok)));
+    }
+
     console.log('\naccessibility');
     const a11y = await openPage(browser, base);
     const violations = {};

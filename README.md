@@ -25,7 +25,10 @@ participants.
   counts in the cells). Click a cell to list its studies.
 - **Browse studies** as cards or as a sortable table: choose columns, sort order and page size.
 - **Open each paper** directly through its DOI.
-- **Export** the filtered studies and filter settings to Excel, and import them again later.
+- **Share** the exact view: the address always describes it (tab, filters, search, chart, table,
+  Gaps), and **Copy link** puts it on the clipboard.
+- **Download** the filtered studies as **CSV** or **BibTeX**, or export them with all settings to
+  Excel and import them again later.
 
 ## Accessibility
 
@@ -63,7 +66,7 @@ updates the test values and runs the tests. Then commit `assets/js/data.js` and
 cd tools && npm ci && npm test
 ```
 
-Lint, the data audit, 91 unit tests and 95 browser checks (186 tests): filter counts, known results, accessibility, offline loading,
+Lint, the data audit, 102 unit tests and 105 browser checks (207 tests): filter counts, known results, accessibility, offline loading,
 page size and speed. They run automatically in GitHub Actions. Details are in `PROJECT_GUIDE.md` §13.
 
 ## Project layout
@@ -79,7 +82,8 @@ assets/js/chart.js         Plot tab
 assets/js/studies.js       Data tab (cards, table, details)
 assets/js/grids.js         Ratings + Spectrum tabs (grids built from SPECTRUM_ROWS)
 assets/js/gaps.js          Gaps tab
-assets/js/io.js            Excel export / import
+assets/js/io.js            Excel export / import, CSV and BibTeX downloads
+assets/js/share.js         shareable links (view state in the address) and Copy link
 assets/js/app.js           start-up, theme, tabs, keyboard, tour (loaded last)
 assets/js/data.js          GENERATED study data — don't edit; use tools/build-data.js
 assets/css/style.css       styles (light/dark design tokens)

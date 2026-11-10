@@ -38,8 +38,9 @@ vm.createContext(core);
 vm.runInContext(read('assets/js/core.js') + `
 ;this.FILTER_SPECS=FILTER_SPECS;this.canon=canon;this.splitValues=splitValues;this.escapeHtml=escapeHtml;
 this.rowMatchesLabels=rowMatchesLabels;this.normalizeDoi=normalizeDoi;this.doiUrl=doiUrl;this.foldText=foldText;
-this.parseSearchQuery=parseSearchQuery;this.termRegex=termRegex;this.searchScore=searchScore;this.buildSearchIndex=buildSearchIndex;`, core);
-const { FILTER_SPECS, canon, splitValues, escapeHtml, rowMatchesLabels, normalizeDoi, doiUrl, foldText, parseSearchQuery, termRegex, searchScore, buildSearchIndex } = core;
+this.parseSearchQuery=parseSearchQuery;this.termRegex=termRegex;this.searchScore=searchScore;this.buildSearchIndex=buildSearchIndex;
+this.coreCsvCell=csvCell;this.toCsv=toCsv;this.toBibtex=toBibtex;this.bibtexEscape=bibtexEscape;this.bibtexKeys=bibtexKeys;`, core);
+const { FILTER_SPECS, canon, splitValues, escapeHtml, rowMatchesLabels, normalizeDoi, doiUrl, foldText, parseSearchQuery, termRegex, searchScore, buildSearchIndex, coreCsvCell, toCsv, toBibtex, bibtexEscape, bibtexKeys } = core;
 const dataCtx = { window: {} };
 vm.createContext(dataCtx);
 vm.runInContext(read('assets/js/data.js'), dataCtx);
@@ -115,6 +116,38 @@ test('an excluded word removes the study', () => eq(searchScore(S({ Title: 'blin
 test('search is accent-insensitive in the data too', () => ok(searchScore(S({ Title: 'Música parlata' }), parseSearchQuery('musica')) > 0));
 test('column names are not searched', () => eq(searchScore(S({ 'Play vs. Game': 'Unstructured play' }), parseSearchQuery('game')), 0));
 
+group('CSV and BibTeX export');
+test('CSV: plain text and numbers are written as-is', () => { eq(coreCsvCell('Interview'), 'Interview'); eq(coreCsvCell(2020), '2020'); eq(coreCsvCell(null), ''); eq(coreCsvCell(''), ''); });
+test('CSV: commas, quotes and line breaks are quoted', () => { eq(coreCsvCell('a,b'), '"a,b"'); eq(coreCsvCell('say "hi"'), '"say ""hi"""'); eq(coreCsvCell('two\nlines'), '"two\nlines"'); });
+test('CSV: formula-like text cannot run in a spreadsheet', () => { eq(coreCsvCell('=SUM(A1)'), "'=SUM(A1)"); eq(coreCsvCell('+cmd'), "'+cmd"); eq(coreCsvCell('@x'), "'@x"); eq(coreCsvCell('-x'), "'-x"); });
+test('CSV: negative and decimal numbers stay numbers', () => { eq(coreCsvCell('-5'), '-5'); eq(coreCsvCell('-0.5'), '-0.5'); });
+test('CSV: the whole table round-trips through a CSV parser', () => {
+  const rows = [{ id: 'A', t: 'x, "y"\nz', n: 3 }, { id: 'B', t: '=1+1', n: '' }];
+  const text = toCsv(rows);
+  // tiny RFC 4180 parser (same rules as tools/build-data.js)
+  const out = []; let row = [], field = '', q = false;
+  for (let i = 0; i < text.length; i++) { const c = text[i];
+    if (q) { if (c === '"') { if (text[i + 1] === '"') { field += '"'; i++ } else q = false } else field += c }
+    else if (c === '"') q = true; else if (c === ',') { row.push(field); field = '' }
+    else if (c === '\r') continue; else if (c === '\n') { row.push(field); out.push(row); row = []; field = '' } else field += c }
+  eq(out, [['id', 't', 'n'], ['A', 'x, "y"\nz', '3'], ['B', "'=1+1", '']]);
+});
+test('BibTeX: LaTeX special characters are escaped', () => eq(bibtexEscape('R&D 50% $x #1 a_b {c} ~ ^ \\'), 'R\\&D 50\\% \\$x \\#1 a\\_b \\{c\\} \\textasciitilde{} \\textasciicircum{} \\textbackslash{}'));
+test('BibTeX: citation keys keep capitals, drop accents and are unique', () => eq(bibtexKeys([{ 'Study ID': 'Ostiz-Blanco 2018a' }, { 'Study ID': 'Ostiz Blanco 2018a' }, { 'Study ID': 'Sánchez 2005' }]), ['OstizBlanco2018a', 'OstizBlanco2018a_2', 'Sanchez2005']));
+test('BibTeX: one well-formed @misc entry per study with title, author, year, DOI and URL', () => {
+  const bib = toBibtex([{ 'Study ID': 'Kamel 2000', Title: 'A study of blind drawing practice', 'Lead author contact details': 'Hesham M. Kamel', Year: 2000, DOI: '10.1145/354324.354334', Pages: 8 }]);
+  ok(/^@misc\{Kamel2000,\n/.test(bib), bib.slice(0, 40));
+  ['title = {{A study of blind drawing practice}}', 'author = {Hesham M. Kamel}', 'year = {2000}', 'doi = {10.1145/354324.354334}', 'url = {https://doi.org/10.1145/354324.354334}', 'pagetotal = {8}'].forEach(x => ok(bib.includes(x), 'missing ' + x));
+  eq((bib.match(/\{/g) || []).length, (bib.match(/\}/g) || []).length, 'braces balanced: ');
+});
+test('BibTeX: empty fields are left out', () => { const bib = toBibtex([{ 'Study ID': 'X 2020', Title: 'T', Year: 2020 }]); ok(!/doi =|url =|author =|pagetotal =/.test(bib), bib); });
+test('BibTeX for all 216 studies: 216 entries, unique keys, balanced braces', () => {
+  const bib = toBibtex(data);
+  const keys = [...bib.matchAll(/^@misc\{([^,]+),/gm)].map(m => m[1]);
+  eq(keys.length, 216); eq(new Set(keys).size, 216);
+  eq((bib.match(/(?<!\\)\{/g) || []).length, (bib.match(/(?<!\\)\}/g) || []).length, 'unescaped braces balanced: ');
+});
+
 // ============================================================== data.js ====
 group('Study data');
 const CUR_YEAR = new Date().getFullYear();
@@ -141,6 +174,17 @@ test('every coded answer is a known option (or Other: …)', () => {
   ok(!bad.length, [...new Set(bad)].slice(0, 3).join(' | '));
 });
 test('every coded column exists in the data', () => frameworkCols.forEach(c => ok(c in data[0], c)));
+
+group('Source files');
+test('no invisible characters in source files (combining marks, BOMs, zero-width spaces)', () => {
+  const files = [...fs.readdirSync(path.join(ROOT, 'assets/js')).filter(f => f.endsWith('.js') && f !== 'data.js').map(f => 'assets/js/' + f),
+    ...fs.readdirSync(__dirname).filter(f => f.endsWith('.js')).map(f => 'tools/' + f), 'index.html', 'assets/css/style.css'];
+  const bad = [];
+  for (const f of files) {
+    read(f).split('\n').forEach((line, i) => { if (/[\u0300-\u036f\uFEFF\u200B-\u200D\u2060]/.test(line)) bad.push(`${f}:${i + 1}`) });
+  }
+  ok(!bad.length, 'write these as \\u escapes: ' + bad.slice(0, 5).join(', '));
+});
 
 group('Definitions are consistent');
 const tokens = Object.values(FILTER_SPECS).flatMap(g => Object.values(g).flatMap(o => Object.keys(o)));
@@ -180,7 +224,7 @@ const csvRow = (cov, reviewer, s) => header.map((h, i) => {
   if (i === 0) return cov; if (i === 3) return reviewer; if (i === 5) return csvCell(s.Title); // duplicate Title column
   return csvCell(s[h] ?? '');
 }).map((v, i) => (i === 0 || i === 3) ? csvCell(v) : v).join(',');
-const makeCsv = (rows, { bom = false, head = header } = {}) => (bom ? '﻿' : '') + [head.map(csvCell).join(','), ...rows].join('\r\n') + '\r\n';
+const makeCsv = (rows, { bom = false, head = header } = {}) => (bom ? '\uFEFF' : '') + [head.map(csvCell).join(','), ...rows].join('\r\n') + '\r\n';
 const build = (csvText, extraArgs = []) => {
   const inF = path.join(TMP, `in-${crypto.randomBytes(4).toString('hex')}.csv`);
   const outF = path.join(TMP, `out-${crypto.randomBytes(4).toString('hex')}.js`);
@@ -208,7 +252,7 @@ test('answer misspellings are fixed, titles are left as written', () => { eq(g1.
 test('spaces are trimmed and collapsed', () => eq(g1.studies[0]['Lead author contact details'], 'Test Author'));
 test('numbers are converted', () => { eq(typeof g1.studies[0].Year, 'number'); eq(g1.studies[0].Year, 2001); });
 test('quotes, commas and line breaks inside cells survive', () => ok(g1.studies[0].Title.includes('"quotes"') && g1.studies[0].Title.includes('\n'), JSON.stringify(g1.studies[0].Title)));
-test('a UTF-8 byte-order mark is handled', () => ok(g1.studies.length === 3 && !('﻿Covidence #' in g1.studies[0])));
+test('a UTF-8 byte-order mark is handled', () => ok(g1.studies.length === 3 && !('\uFEFFCovidence #' in g1.studies[0])));
 test('the output has the generated-file banner', () => ok(fs.readFileSync(g1.outF, 'utf8').startsWith('// GENERATED FILE')));
 const fails = (name, csvText, pattern) => test(name, () => { const r = build(csvText); eq(r.code, 1, r.out.slice(-200) + ' — exit code '); ok(!r.studies, 'something was written'); ok(pattern.test(r.out), 'message: ' + r.out.slice(-300)); });
 fails('a missing required column is refused, nothing written', makeCsv([csvRow(1, 'Consensus', baseStudy(1))], { head: header.map(h => h === 'Study Method' ? 'Study Methods' : h) }), /Missing columns[\s\S]*Study Method/);

@@ -448,7 +448,9 @@ function initializeColumnDropdown(headerKeys) {
         placeholder: 'choose filters or search...',
         useLabels: !1,
         allowAdditions: !1,
-        transition: 'scale',
+        // Open instantly: while the old 200 ms 'scale' animation ran, Fomantic
+        // ignored Enter, so quick keyboard and screen-reader users lost their pick.
+        duration: 0,
         fullTextSearch: !0,
         onChange: function (value, text, $selectedItems) {
             const selectedIds = value.split(',').filter(id => id !== "");
@@ -1537,6 +1539,7 @@ function renderTable(data, innerEdit) {
             }));
         $plotFilter.dropdown({
             values: plotOptions,
+            duration: 0,
             action: 'activate',
             fullTextSearch: !0,
             onChange: (value) => getPlot(value),
@@ -2116,7 +2119,9 @@ function doInitialization() {
         clearable: !0,
         useLabels: !1,
         allowAdditions: !1,
-        transition: 'scale',
+        // Open instantly: while the old 200 ms 'scale' animation ran, Fomantic
+        // ignored Enter, so quick keyboard and screen-reader users lost their pick.
+        duration: 0,
         onAdd: function (value, text, $selectedItem) {
             setTimeout(() => {
                 const $label = $(this).find(`a.ui.label[data-value="${value}"]`);

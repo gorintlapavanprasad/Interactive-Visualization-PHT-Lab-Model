@@ -562,3 +562,12 @@ Checked on 2026-11-09:
 - The Excel round trip of all view settings works.
 - axe reports 0 violations in Table view, and there are no errors.
 - CI now runs 60 checks.
+
+### Bug found by CI: Enter in the filter menus was often ignored
+After the T7 push, GitHub Actions caught a keyboard bug that had been in the site all along. Typing
+in a tag menu (e.g. "Interview") and pressing Enter quickly **often selected nothing**. Fomantic
+ignores Enter while the menu's 200 ms opening animation runs. Quick keyboard and screen-reader users
+lost their choice without any message: in 8 repeated tries, only 1 worked (the version before T7
+behaved the same). The menus now open instantly (`duration: 0`), and 8 of 8 tries work. The CI check
+now waits for the option to appear and confirms the selection, so it reports this bug instead of
+passing by chance.

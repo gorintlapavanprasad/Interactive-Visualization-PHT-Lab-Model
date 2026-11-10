@@ -4,6 +4,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- Security: only this site's own scripts, fonts and files may load or run; no inline
+       scripts or eval. (Inline styles stay allowed: charts, tour and menus position with them.) -->
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-src 'none'" />
+  <meta name="referrer" content="strict-origin-when-cross-origin" />
 
   <title>PHT LAB | Accessible Research Dashboard</title>
 
@@ -543,7 +548,7 @@
             </div>
           </div>
           <div class="buttons-container">
-            <button class="ui fluid button" onclick="applyFilters('reset')" data-tooltip="Remove Filters"
+            <button class="ui fluid button" data-action="reset" data-tooltip="Remove Filters"
               aria-label="Reset all filters">
               <i class="trash alternate icon"></i>
             </button>
@@ -556,12 +561,12 @@
               <input type="file" id="import-file-input" accept=".xlsx" style="display: none" />
             </div>
 
-            <button class="ui fluid button" onclick="exportFilteredData()" data-tooltip="Export Filters"
+            <button class="ui fluid button" data-action="export-xlsx" data-tooltip="Export Filters"
               aria-label="Export current data">
               <i class="upload icon"></i>
             </button>
 
-            <button class="ui fluid button" onclick="getPlot()" data-tooltip="Reset Chart" aria-label="Refresh Chart">
+            <button class="ui fluid button" data-action="refresh-chart" data-tooltip="Reset Chart" aria-label="Refresh Chart">
               <i class="redo icon"></i>
             </button>
           </div>
@@ -648,7 +653,7 @@
 
                 <div class="hover-nav-item" role="none" id="theme-toggle-container">
                   <label class="switch">
-                    <input type="checkbox" id="theme" onchange="toggleTheme('theme')" role="switch" aria-labelledby="theme-text">
+                    <input type="checkbox" id="theme" role="switch" aria-labelledby="theme-text">
                     <span class="slider"></span>
                   </label>
                   <span class="theme-label" id="theme-text">Light Mode</span>
@@ -741,10 +746,10 @@
                 <select id="pageSize"></select>
               </div>
               <div class="download-buttons" role="group" aria-label="Download the filtered studies">
-                <button type="button" class="ui button" id="downloadCsv" onclick="exportCsv()">
+                <button type="button" class="ui button" id="downloadCsv" data-action="export-csv">
                   <i class="ph ph-file-csv" aria-hidden="true"></i> CSV
                 </button>
-                <button type="button" class="ui button" id="downloadBib" onclick="exportBibtex()">
+                <button type="button" class="ui button" id="downloadBib" data-action="export-bib">
                   <i class="ph ph-quotes" aria-hidden="true"></i> BibTeX
                 </button>
               </div>

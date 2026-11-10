@@ -203,7 +203,7 @@ infrastructure, **P3** = nice to have.
 | T8 | P1 | ✅ **Done** (section 17): Gaps tab, a heatmap of any two dimensions with gaps highlighted | — |
 | T9 | P2 | ✅ **Done** (section 12): no requests to other servers | Works with network off |
 | T10 | P2 | ✅ Automated part done (0 axe violations; reflow at 400% zoom; see section 8). Remaining: sessions with real screen-reader users, shorter tour | Signed off by disabled testers |
-| T11 | P2 | ✅ **Done** (section 13): GitHub Actions runs lint, the data audit, 102 unit tests and 105 browser checks on every push and pull request (sections 19–20) | CI green on every push |
+| T11 | P2 | ✅ **Done** (section 13): GitHub Actions runs lint, the data audit, 102 unit tests and 109 browser checks on every push and pull request (sections 19–22) | CI green on every push |
 | T12 | P2 | ✅ **Done** (section 18): 10 focused script files, ESLint in CI, jQuery 3.7.1, grids from config | — |
 | T13 | P2 | ✅ Mostly done (section 14): unused files and dead code removed, README added. Remaining (owner's decisions): choose a project LICENSE, confirm the Highcharts licence, archive the old DataSpectra repo | — |
 | T14 | P2 | ✅ **Done.** Live on GitHub Pages | Public URL |
@@ -763,3 +763,41 @@ studies**. For example, Fun-First: 53 + 19 + 41 + 41 + 30 + 32 (N/A) = 216.
   stated, 32 of 216 studies".
 - Tests: the N/A cell must equal an independent count for every row, and all six cells must add up
   to the total. The golden reference values for the five answer cells are unchanged.
+
+## 22. Security: Content-Security-Policy (2026-11-10)
+
+`index.html` now sets a strict **Content-Security-Policy**. The browser enforces it:
+- Only this site's own script files may run. **No inline scripts, no inline event handlers, no
+  `eval`.**
+- Fonts, images and network requests may only come from this site. Images may also be `data:` or
+  `blob:`, which chart downloads use. Fonts may be `data:` (Fomantic's built-in dropdown-arrow font).
+- Plugins, forms and frames are disabled.
+
+Inline *styles* remain allowed, because Highcharts, the tour and the menus position elements with them.
+
+Why: if a future bug ever let someone inject HTML, for example through a data value or a crafted
+share link, the browser would refuse to run any script in it. It also enforces the "no outside
+servers" rule at the browser level.
+
+To make this possible, the last six inline `onclick`/`onchange` attributes (Reset, Excel
+export, Refresh chart, CSV, BibTeX, theme switch) were replaced with `data-action` buttons wired up in
+`app.js`. None of the bundled libraries use `eval` or `Function()` (checked file by file).
+`<meta name="referrer" content="strict-origin-when-cross-origin">` limits what DOI links reveal.
+
+Tests (4 new):
+- The policy is present and strict.
+- **Using every feature produces zero policy violations**: all tabs, chart modes, table view, Excel/CSV/BibTeX
+  export, theme, a gap-cell list, the tour, reset and a pasted share link.
+- An injected `<img onerror>` and a `javascript:` link are blocked.
+- `eval` is blocked.
+
+Found while adding this:
+- **The test runners were saving real files.** The download tests left 6 CSV files in the
+  Downloads folder; they were moved to a scratch folder. Both runners now deny downloads at the
+  browser level.
+- The policy caught that axe (the accessibility checker) was being injected as an inline script. It
+  is now injected through DevTools, so the policy itself stays strict.
+
+The guided tour also gained a step that points out **Copy link** and the CSV/BibTeX downloads.
+
+Total: **211 tests** (102 unit + 109 browser), plus lint and the data audit.

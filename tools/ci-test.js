@@ -111,6 +111,8 @@ async function collectGolden(page) {
     executablePath: CHROME, headless: 'new', protocolTimeout: 600000,
     args: process.env.CI ? ['--no-sandbox', '--disable-dev-shm-usage'] : []
   });
+  // Tests click the download buttons: never save files to the user's Downloads folder.
+  await (await browser.target().createCDPSession()).send('Browser.setDownloadBehavior', { behavior: 'deny' });
   const dataJs = fs.readFileSync(path.join(ROOT, 'assets/js/data.js'));
   const fingerprint = crypto.createHash('sha256').update(dataJs.toString('utf8').replace(/\r\n/g, '\n').replace(/^\/\/ Built by .*$/m, '')).digest('hex').slice(0, 16);
   try {
@@ -315,7 +317,7 @@ async function collectGolden(page) {
     check('Columns chooser adds the column at the end', list.lastColumn === 'Primary Country' && list.headerCount, list.lastColumn);
     check('table DOI links go to doi.org; titles open the right study', list.doiOk && list.details);
     check('while searching, the table shows best matches first', list.searchFirst);
-    if (!(await page.evaluate(() => !!window.axe))) await page.addScriptTag({ content: AXE });
+    if (!(await page.evaluate(() => !!window.axe))) await page.evaluate(AXE);
     const tableAxe = await page.evaluate(async () => (await axe.run(document, { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'] }, resultTypes: ['violations'] })).violations.map(v => `${v.id}: ${v.nodes.slice(0, 2).map(n => n.target.join(' ')).join(' | ')}`));
     check('axe-core: 0 violations in Table view', tableAxe.length === 0, tableAxe.join('; '));
     await page.evaluate(() => { applyFilters('reset'); document.querySelector('.view-toggle [data-view="cards"]').click() });
@@ -708,13 +710,72 @@ async function collectGolden(page) {
       check('header shows the right control for each tab, via links and clicks', results.every(r => r.ok), JSON.stringify(results.filter(r => !r.ok)));
     }
 
+    // ---------------------------------------------- content security policy ----
+    console.log('\nsecurity policy (CSP)');
+    {
+      const p = await browser.newPage();
+      await p.setViewport({ width: 1440, height: 900 });
+      const consoleCsp = [];
+      p.on('console', m => { if (/Content Security Policy|Refused to/i.test(m.text())) consoleCsp.push(m.text().slice(0, 160)) });
+      await p.evaluateOnNewDocument(() => {
+        localStorage.setItem('pht_lab_tour_seen', 'true');
+        window.__csp = [];
+        document.addEventListener('securitypolicyviolation', e => window.__csp.push(e.violatedDirective + ' ' + (e.blockedURI || '') + ' ' + (e.sample || '')));
+      });
+      await p.goto(base, { waitUntil: 'networkidle0' });
+      await p.waitForFunction(() => window.plotState && plotState.chart);
+      const policy = await p.evaluate(() => document.querySelector('meta[http-equiv="Content-Security-Policy"]')?.content || '');
+      // use every feature once
+      await p.evaluate(async () => {
+        const wait = ms => new Promise(r => setTimeout(r, ms));
+        const orig = XLSX.writeFile; XLSX.writeFile = () => {};
+        const origDl = window.downloadText;
+        document.querySelector('[data-action="export-xlsx"]').click();
+        XLSX.writeFile = orig;
+        for (const t of ['Show-data', 'ratings-grid', 'Show-grid', 'Show-gaps', 'Show-plot']) { $(`#myTab .item[data-tab="${t}"]`).trigger('click'); await wait(150) }
+        document.getElementById('stackBy').value = 'Community of focus'; document.getElementById('plotMode').value = 'percent';
+        document.getElementById('plotMode').dispatchEvent(new Event('change')); await wait(150);
+        $('#myTab .item[data-tab="Show-data"]').trigger('click'); await wait(100);
+        document.querySelector('.view-toggle [data-view="table"]').click(); await wait(100);
+        document.querySelector('[data-action="export-csv"]').click(); document.querySelector('[data-action="export-bib"]').click();
+        void origDl;
+        document.getElementById('theme').click(); await wait(150); document.getElementById('theme').click();
+        $('#myTab .item[data-tab="Show-gaps"]').trigger('click'); await wait(100);
+        document.querySelector('#gapTable .gap-cell').click(); await wait(600); $('#spectrumData').modal('hide'); await wait(400);
+        startGuidedTour(); await wait(300); Shepherd.activeTour && Shepherd.activeTour.cancel();
+        document.querySelector('[data-action="reset"]').click(); await wait(100);
+        location.hash = 'q=blind&tab=data'; await wait(400);
+      });
+      await sleep(500);
+      const afterUse = await p.evaluate(() => window.__csp.slice());
+      const consoleAfterUse = consoleCsp.slice(); // before the deliberate injection test below
+      // an injected inline handler and eval must both be blocked
+      const blocked = await p.evaluate(async () => {
+        window.__inj = 0;
+        const d = document.createElement('div');
+        d.innerHTML = '<img src="data:," onerror="window.__inj=1"><a href="javascript:window.__inj=2" id="__jslink">x</a>';
+        document.body.appendChild(d);
+        d.querySelector('#__jslink').click();
+        await new Promise(r => setTimeout(r, 300));
+        let evalBlocked = false;
+        try { eval('1 + 1') } catch (e) { evalBlocked = e instanceof EvalError || /unsafe-eval|Content Security/i.test(String(e)) }
+        d.remove();
+        return { injectedRan: window.__inj, evalBlocked, violationsSeen: window.__csp.length };
+      });
+      check('a strict Content-Security-Policy is set (own scripts only, no inline script, no eval)', /script-src 'self'(;|$)/.test(policy) && !/unsafe-eval/.test(policy) && /object-src 'none'/.test(policy), policy);
+      check('using every feature causes no CSP violations', afterUse.length === 0 && consoleAfterUse.length === 0, afterUse.concat(consoleAfterUse).slice(0, 3).join(' | '));
+      check('injected inline script is blocked by the policy', blocked.injectedRan === 0 && blocked.violationsSeen > 0, JSON.stringify(blocked));
+      check('eval is blocked by the policy', blocked.evalBlocked, JSON.stringify(blocked));
+      await p.close();
+    }
+
     console.log('\naccessibility');
     const a11y = await openPage(browser, base);
     const violations = {};
     for (const [m, s] of [['Show-plot'], ['Show-plot', 'Show-plot/table'], ['Show-data'], ['ratings-grid'], ['Show-grid'], ['Show-gaps']]) {
       await tab(a11y, m);
       if (s) { await a11y.evaluate(s => $(`#show-plot-pane .menu .item[data-tab="${s}"]`).trigger('click'), s); await sleep(300) }
-      if (!(await a11y.evaluate(() => !!window.axe))) await a11y.addScriptTag({ content: AXE });
+      if (!(await a11y.evaluate(() => !!window.axe))) await a11y.evaluate(AXE);
       const v = await a11y.evaluate(async () => (await axe.run(document, { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'] }, resultTypes: ['violations'] })).violations.map(x => `${x.id} (${x.impact}): ${x.nodes.slice(0, 2).map(n => n.target.join(' ')).join(' | ')}`));
       v.forEach(x => (violations[x] = violations[x] || []).push(s || m));
       if (s) await a11y.evaluate(() => $('#show-plot-pane .menu .item[data-tab="Show-plot/visual"]').trigger('click'));

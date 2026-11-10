@@ -52,7 +52,7 @@ const focused = (page) => page.evaluate(() => {
   };
 });
 async function axeRun(page) {
-  if (!(await page.evaluate(() => !!window.axe))) await page.addScriptTag({ content: AXE });
+  if (!(await page.evaluate(() => !!window.axe))) await page.evaluate(AXE);
   return page.evaluate(async () => {
     const r = await axe.run(document, { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'] }, resultTypes: ['violations'] });
     return r.violations.map(v => ({ id: v.id, impact: v.impact, n: v.nodes.length, sample: v.nodes.slice(0, 3).map(n => n.target.join(' ')) }));
@@ -68,6 +68,8 @@ async function showTab(page, main, sub) {
 
 (async () => {
   const browser = await puppeteer.launch({ executablePath: CHROME, headless: 'new', args: ['--no-first-run', '--disable-extensions'] });
+  // Tests click the download buttons: never save files to the user's Downloads folder.
+  await (await browser.target().createCDPSession()).send('Browser.setDownloadBehavior', { behavior: 'deny' });
   try {
     // ---------------- 0. Automated WCAG scan (axe-core) on every view ----------
     {

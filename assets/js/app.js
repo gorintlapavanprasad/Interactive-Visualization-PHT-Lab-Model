@@ -304,6 +304,19 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         })
     });
+    // Buttons (no inline onclick: the Content-Security-Policy forbids inline script)
+    const actions = {
+        'reset': () => applyFilters('reset'),
+        'export-xlsx': () => exportFilteredData(),
+        'refresh-chart': () => getPlot(),
+        'export-csv': () => exportCsv(),
+        'export-bib': () => exportBibtex()
+    };
+    document.addEventListener('click', e => {
+        const el = e.target.closest('[data-action]');
+        if (el && actions[el.getAttribute('data-action')]) actions[el.getAttribute('data-action')]()
+    });
+    document.getElementById('theme').addEventListener('change', () => toggleTheme());
     // Opened from a shared link? Apply it last, once the tabs are set up.
     applyShareState(location.hash)
 });
@@ -355,6 +368,21 @@ function startGuidedTour() {
         text: 'Switch between <strong>Plot, Data, Ratings, Spectrum</strong> and <strong>Gaps</strong> (which combinations have never been studied). Everything updates instantly with your filters.',
         attachTo: {
             element: '#myTab',
+            on: 'bottom'
+        },
+        buttons: [{
+            text: 'Back',
+            action: currentTourInstance.back
+        }, {
+            text: 'Next',
+            action: currentTourInstance.next
+        }]
+    }, {
+        id: 'share',
+        title: 'Share and cite 🔗',
+        text: '<strong>Copy link</strong> copies a link to exactly what you see (filters, search, tab, chart). The <strong>Data</strong> tab can download the filtered studies as <strong>CSV</strong> or <strong>BibTeX</strong>.',
+        attachTo: {
+            element: '#copyLink',
             on: 'bottom'
         },
         buttons: [{

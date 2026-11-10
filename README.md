@@ -45,7 +45,7 @@ npx http-server -p 8765 -c-1
 ```
 
 Then open http://127.0.0.1:8765/. Everything is served from this repository; the site makes no
-requests to outside servers.
+requests to outside servers, and a strict Content-Security-Policy only lets its own scripts run.
 
 ## Update the data (from a Covidence export)
 
@@ -66,7 +66,7 @@ updates the test values and runs the tests. Then commit `assets/js/data.js` and
 cd tools && npm ci && npm test
 ```
 
-Lint, the data audit, 102 unit tests and 105 browser checks (207 tests): filter counts, known results, accessibility, offline loading,
+Lint, the data audit, 102 unit tests and 109 browser checks (211 tests): filter counts, known results, accessibility, offline loading,
 page size and speed. They run automatically in GitHub Actions. Details are in `PROJECT_GUIDE.md` §13.
 
 ## Project layout

@@ -189,10 +189,10 @@ infrastructure, **P3** = nice to have.
 | T5 | P1 | ✅ Mostly done (viridis scale, legend, counts in cells). Remaining: a per-row "N/A / undisclosed" column | Rows sum to N |
 | T6 | P1 | ✅ **Done** (section 15): "Colour bars by" any coded column or none; "Show" counts or percentages; framework order; "Not recorded" segment | — |
 | T7 | P1 | ✅ **Done** (section 16): Cards/Table views, sortable columns, sort controls, page size, column chooser | — |
-| T8 | P1 | Cross-tab heatmap: any two dimensions (e.g. Community × Study Method) to show research gaps | — |
+| T8 | P1 | ✅ **Done** (section 17): Gaps tab, a heatmap of any two dimensions with gaps highlighted | — |
 | T9 | P2 | ✅ **Done** (section 12): no requests to other servers | Works with network off |
 | T10 | P2 | ✅ Automated part done (0 axe violations; reflow at 400% zoom; see section 8). Remaining: sessions with real screen-reader users, shorter tour | Signed off by disabled testers |
-| T11 | P2 | ✅ **Done** (section 13): GitHub Actions runs the data audit and 60 browser checks on every push and pull request | CI green on every push |
+| T11 | P2 | ✅ **Done** (section 13): GitHub Actions runs the data audit and 66 browser checks on every push and pull request | CI green on every push |
 | T12 | P2 | Code health: split `script.js` into modules, ESLint, upgrade jQuery, generate grid rows from config | — |
 | T13 | P2 | ✅ Mostly done (section 14): unused files and dead code removed, README added. Remaining (owner's decisions): choose a project LICENSE, confirm the Highcharts licence, archive the old DataSpectra repo | — |
 | T14 | P2 | ✅ **Done.** Live on GitHub Pages | Public URL |
@@ -404,7 +404,7 @@ Run the same tests on your own computer (needs Node 18+ and Google Chrome):
 cd tools && npm ci && npm test
 ```
 
-### What is checked (60 checks)
+### What is checked (66 checks)
 
 | Area | Checks |
 |---|---|
@@ -414,6 +414,7 @@ cd tools && npm ci && npm test
 | Known results | 25 reference values: filter results (Interview = 92, …), search results (blind = 78, …), the top search result, every grid row and the number of empty options |
 | Logic | OR within a group never gives fewer studies; AND across groups never gives more; reset shows all |
 | Study list | Cards by default; Table view rows and pressed state; Year header sorts newest/oldest first with `aria-sort`; "Per page" works; new columns are added at the end; DOI links and title → right study; search keeps best matches first; axe finds 0 violations in Table view |
+| Gaps | Every cell equals an independent count from the data; gaps are hatched and read "no studies"; selecting a cell lists exactly its studies; every framework answer is shown; the hide option works; filters apply |
 | Chart controls | % without colour = % of filtered studies; with colour every bar adds up to 100% with n under it; framework order; data table matches the chart; blanks shown as "Not recorded"; choices saved in the export; one chart instance |
 | Accessibility | axe-core finds 0 WCAG 2.2 AA violations on every tab; every focusable control (including the settings menu) has a name a screen reader can read; keyboard filtering works and the count is announced; at 200% zoom the filters, the chart and its data table are usable with no horizontal scrolling |
 | Offline | No requests to outside servers; no missing files; fonts and icons load |
@@ -571,3 +572,41 @@ lost their choice without any message: in 8 repeated tries, only 1 worked (the v
 behaved the same). The menus now open instantly (`duration: 0`), and 8 of 8 tries work. The CI check
 now waits for the option to appear and confirms the selection, so it reports this bug instead of
 passing by chance.
+
+## 17. Gaps tab: research-gap heatmap (2026-11-09)
+
+A fifth tab, **Gaps**, answers: *which combinations of two dimensions have (not) been studied?*
+
+- **Rows and Columns:** any two of participant groups, the eight framework spectra, play value,
+  study methods, technology, context, community of focus, user involvement, proxies, recruitment,
+  issue addressed, contribution type and primary country. The default is *Community of focus ×
+  Study Method*. A **Swap** button flips the two.
+- Each cell = the studies matching your filters that have **both** answers. A study with several
+  answers counts in each matching cell.
+- **Gaps (0)** are hatched and show "0", so they're visible without colour, in greyscale and in High
+  Contrast mode. Screen readers hear "Cognitive impairment and Field study: no studies".
+- **Every possible answer** from the framework is listed, even one no study has (e.g. *Mostly/Entirely
+  chance-based*), because an empty row is a gap too.
+- **Show:** number of studies, or % of row. The colour follows what is shown (viridis).
+- **Hide "Not applicable", "Undisclosed" and "Not recorded"** (on by default), so they don't crowd
+  out real answers. Untick the box to include them.
+- Row and column totals count distinct studies. A summary line gives the number of empty
+  combinations and the most-studied pair, e.g. "39 of 120 combinations have no studies. Most studied:
+  Blind or low vision × Interview (37)."
+- **Select a cell** to list its studies, then jump to any of them in the Data tab.
+- It's an accessible HTML table: column headers, row headers, a caption, sticky headers while
+  scrolling, and one button per non-empty cell with a full description.
+- All settings are saved in the Excel export and restored on import.
+
+Checked on 2026-11-09:
+- All 120 cells of *Community × Study Method* equal an independent count from the raw data.
+- Selecting a cell listed exactly its 37 studies.
+- Chance-based rows appear even with no studies, and the hide option and filters work.
+- The Excel round trip works.
+- axe reports 0 violations, and the offline check covers the tab.
+- CI now runs 66 checks.
+
+Some gaps visible straight away in the full data set:
+- No study is mostly or entirely chance-based.
+- Cognitive impairment and older adults are barely combined with most study methods.
+- No study recorded "Other" as its community of focus.

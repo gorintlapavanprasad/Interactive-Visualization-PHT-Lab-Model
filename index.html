@@ -590,6 +590,10 @@
                 aria-selected="false" aria-controls="Show-grid-pane" tabindex="0">
                 <i class="ph ph-grid-nine"></i> Spectrum
               </a>
+              <a class="item" data-tab="Show-gaps" id="Show-gaps" onclick="animateOptions('hide')" role="tab"
+                aria-selected="false" aria-controls="Show-gaps-pane" tabindex="-1">
+                <i class="ph ph-squares-four"></i> Gaps
+              </a>
             </div>
           </div>
 
@@ -970,6 +974,52 @@
                       max="100" aria-labelledby="intensity-label-2" />
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="ui tab" data-tab="Show-gaps" id="Show-gaps-pane" role="tabpanel" tabindex="0"
+            aria-labelledby="sr-gaps-title">
+            <div class="gap-container">
+              <h2 id="sr-gaps-title" class="gap-title">Research gaps: which combinations have been studied?</h2>
+              <p class="gap-intro">Choose two dimensions. Each cell counts the studies (matching your filters) that have
+                both answers. Hatched cells with <strong>0</strong> are combinations no study has looked at yet.
+                Select a cell to list its studies.</p>
+              <div class="data-toolbar gap-toolbar" role="group" aria-label="Gap map options">
+                <div class="chart-control">
+                  <label for="gapRows">Rows</label>
+                  <select id="gapRows"></select>
+                </div>
+                <button type="button" class="ui button gap-swap" id="gapSwap" aria-label="Swap rows and columns">
+                  <i class="ph ph-arrows-left-right" aria-hidden="true"></i> Swap
+                </button>
+                <div class="chart-control">
+                  <label for="gapCols">Columns</label>
+                  <select id="gapCols"></select>
+                </div>
+                <div class="chart-control narrow">
+                  <label for="gapMode">Show</label>
+                  <select id="gapMode">
+                    <option value="count">Number of studies</option>
+                    <option value="row">% of row</option>
+                  </select>
+                </div>
+                <div class="gap-check">
+                  <input type="checkbox" id="gapHideNA" checked>
+                  <label for="gapHideNA">Hide "Not applicable", "Undisclosed" and "Not recorded"</label>
+                </div>
+              </div>
+              <p id="gap-summary" class="gap-summary"></p>
+              <div class="gap-table-wrap" tabindex="0" role="region" aria-labelledby="gapCaption">
+                <table id="gapTable" class="gap-table">
+                  <caption id="gapCaption"></caption>
+                  <thead></thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+              <div class="gap-legend" aria-hidden="true">
+                <span class="gap-legend-zero">0</span> no studies (gap)
+                <span class="viridis-legend-bar gap-legend-bar"></span> fewer → more studies
               </div>
             </div>
           </div>

@@ -320,6 +320,60 @@ async function collectGolden(page) {
     check('axe-core: 0 violations in Table view', tableAxe.length === 0, tableAxe.join('; '));
     await page.evaluate(() => { applyFilters('reset'); document.querySelector('.view-toggle [data-view="cards"]').click() });
 
+    // -------------------------------------------------------------- gaps ----
+    console.log('\ngaps (two-dimension heatmap)');
+    await tab(page, 'Show-gaps');
+    const gaps = await page.evaluate(async () => {
+      const wait = ms => new Promise(r => setTimeout(r, ms));
+      applyFilters('reset'); await wait(50);
+      const set = (r, c, mode = 'count', hide = true) => {
+        document.getElementById('gapRows').value = r; document.getElementById('gapCols').value = c;
+        document.getElementById('gapMode').value = mode; document.getElementById('gapHideNA').checked = hide;
+        renderGaps();
+      };
+      const out = {};
+      set('Community of focus', 'Study Method');
+      // every cell equals an independent count from the raw data, and never exceeds its row/column totals
+      const rows = gapLabels.rows, cols = gapLabels.cols;
+      const has = (r, col, label) => splitValues(r[col]).some(v => displayLabel(v) === label);
+      let wrong = [], over = 0;
+      rows.forEach((a, i) => cols.forEach((b, j) => {
+        const n = gapCells[i][j].length;
+        const indep = csvData.filter(r => has(r, 'Community of focus', a) && has(r, 'Study Method', b)).length;
+        if (n !== indep) wrong.push(a + ' x ' + b + ': ' + n + ' vs ' + indep);
+      }));
+      const trs = [...document.querySelectorAll('#gapTable tbody tr:not(.gap-total-row)')];
+      trs.forEach((tr, i) => { const rowTotal = +tr.lastElementChild.textContent; gapCells[i].forEach(u => { if (u.length > rowTotal) over++ }) });
+      out.cells = { checked: rows.length * cols.length, wrong: wrong.slice(0, 3), over };
+      out.zeroCellsAccessible = [...document.querySelectorAll('#gapTable .gap-zero')].every(td => /no studies/.test(td.textContent));
+      out.zeros = document.querySelectorAll('#gapTable .gap-zero').length;
+      out.summaryMentionsZeros = new RegExp('^' + out.zeros + ' of ' + rows.length * cols.length).test(document.getElementById('gap-summary').textContent);
+      // clicking a cell lists exactly its studies
+      const btn = document.querySelector('#gapTable .gap-cell');
+      btn.click(); await wait(700);
+      out.clickList = { cell: gapCells[+btn.dataset.r][+btn.dataset.c].length, listed: document.querySelectorAll('.study-jump-item').length };
+      $('#spectrumData').modal('hide'); await wait(500);
+      // every framework answer is a row, even with no studies (empty rows are gaps)
+      set('Skill vs. Chance', 'Social vs. Solo');
+      const spec = Object.values(FILTER_SPECS.first['Skill vs. Chance']).map(displayLabel).filter(l => !GAP_HIDDEN.has(canon(l)));
+      out.allAnswersShown = spec.every(l => gapLabels.rows.includes(l));
+      // the checkbox brings back Not applicable / Undisclosed
+      set('Skill vs. Chance', 'Social vs. Solo', 'count', false);
+      out.naShown = gapLabels.rows.includes('Not Applicable');
+      // filters apply
+      set('Community of focus', 'Study Method');
+      allFilters = { second: 'study_interview' }; applyFilters(); renderGaps(); await wait(50);
+      out.filteredTotal = { shown: +document.querySelector('#gapTable .gap-total-row td:last-child').textContent, results: filteredDataTmp.length };
+      applyFilters('reset');
+      return out;
+    });
+    check('every Gaps cell equals an independent count from the data', gaps.cells.wrong.length === 0 && gaps.cells.over === 0, `${gaps.cells.checked} cells; ${gaps.cells.wrong.join('; ')}`);
+    check('gap cells (0) are hatched and read "no studies"; summary counts them', gaps.zeroCellsAccessible && gaps.summaryMentionsZeros, `${gaps.zeros} gaps`);
+    check('selecting a Gaps cell lists exactly its studies', gaps.clickList.cell === gaps.clickList.listed, JSON.stringify(gaps.clickList));
+    check('every framework answer is shown, even with no studies', gaps.allAnswersShown);
+    check('"Hide Not applicable…" can be switched off', gaps.naShown);
+    check('Gaps follows the filters', gaps.filteredTotal.shown <= gaps.filteredTotal.results && gaps.filteredTotal.shown > 0, JSON.stringify(gaps.filteredTotal));
+
     // ------------------------------------------------------------ budget ----
     console.log('\nspeed and size budget');
     await tab(page, 'Show-plot');
@@ -343,7 +397,7 @@ async function collectGolden(page) {
     console.log('\naccessibility');
     const a11y = await openPage(browser, base);
     const violations = {};
-    for (const [m, s] of [['Show-plot'], ['Show-plot', 'Show-plot/table'], ['Show-data'], ['ratings-grid'], ['Show-grid']]) {
+    for (const [m, s] of [['Show-plot'], ['Show-plot', 'Show-plot/table'], ['Show-data'], ['ratings-grid'], ['Show-grid'], ['Show-gaps']]) {
       await tab(a11y, m);
       if (s) { await a11y.evaluate(s => $(`#show-plot-pane .menu .item[data-tab="${s}"]`).trigger('click'), s); await sleep(300) }
       if (!(await a11y.evaluate(() => !!window.axe))) await a11y.addScriptTag({ content: AXE });
@@ -420,7 +474,7 @@ async function collectGolden(page) {
     off.on('response', r => { if (r.status() >= 400) failed.push(`${r.status()} ${r.url()}`) });
     await off.evaluateOnNewDocument(() => localStorage.setItem('pht_lab_tour_seen', 'true'));
     await off.goto(base, { waitUntil: 'networkidle0' });
-    for (const t of ['Show-grid', 'ratings-grid', 'Show-data', 'Show-plot']) await tab(off, t);
+    for (const t of ['Show-grid', 'ratings-grid', 'Show-data', 'Show-gaps', 'Show-plot']) await tab(off, t);
     const fontsOk = await off.evaluate(async () => { await document.fonts.ready; return ['16px Phosphor', '16px Icons', '16px Lato'].every(f => document.fonts.check(f)) });
     check('no requests to outside servers', outside.length === 0, outside.slice(0, 3).join(', '));
     check('no missing files (HTTP 4xx/5xx)', failed.length === 0, failed.slice(0, 3).join(', '));

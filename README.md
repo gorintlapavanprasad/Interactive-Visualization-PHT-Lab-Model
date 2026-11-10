@@ -19,6 +19,8 @@ participants.
   it would return, and options with no results are greyed out.
 - **Plot** any column. Colour the bars by any coded column (or none), show counts or percentages,
   and get a data-table view.
+- **Gaps:** a heatmap of any two dimensions (e.g. Community of focus × Study Method). Combinations
+  no study has looked at are highlighted.
 - **Ratings and Spectrum grids** show where studies sit on each spectrum (viridis colour scale with
   counts in the cells). Click a cell to list its studies.
 - **Browse studies** as cards or as a sortable table: choose columns, sort order and page size.
@@ -61,7 +63,7 @@ updates the test values and runs the tests. Then commit `assets/js/data.js` and
 cd tools && npm ci && npm test
 ```
 
-The data audit plus 60 browser checks: filter counts, known results, accessibility, offline loading,
+The data audit plus 66 browser checks: filter counts, known results, accessibility, offline loading,
 page size and speed. They run automatically in GitHub Actions. Details are in `PROJECT_GUIDE.md` §13.
 
 ## Project layout

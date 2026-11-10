@@ -96,7 +96,7 @@ async function collectGolden(page) {
     reset(); await wait();
     displaySpectrum();
     document.querySelectorAll('.type-2 tr[data-row]').forEach(tr => {
-      out['grid: ' + tr.getAttribute('data-row')] = [...tr.querySelectorAll('td[data-column]')].map(td => +(td.getAttribute('data-count') || 0)).join(',');
+      out['grid: ' + tr.getAttribute('data-row')] = [...tr.querySelectorAll('td[data-column]:not([data-rest])')].map(td => +(td.getAttribute('data-count') || 0)).join(',');
     });
     out['zero-count options'] = [...document.querySelectorAll('.menu .item.zero-count')].length;
     return out;
@@ -503,14 +503,16 @@ async function collectGolden(page) {
       // every study is accounted for in each grid row: 5 cells + N/A + undisclosed + blank = all studies
       document.querySelectorAll('.type-2 tr[data-row]').forEach(tr => {
         const dim = tr.getAttribute('data-row');
-        const cells = [...tr.querySelectorAll('td[data-column]')].reduce((a, td) => a + +(td.getAttribute('data-count') || 0), 0);
+        const cells = [...tr.querySelectorAll('td[data-column]:not([data-rest])')].reduce((a, td) => a + +(td.getAttribute('data-count') || 0), 0);
+        const restShown = +(tr.querySelector('td[data-rest]')?.getAttribute('data-count') ?? -1);
         const rest = csvData.filter(r => { const v = String(r[dim] ?? '').trim().toLowerCase(); return !v || v.startsWith('not applicable') || v.startsWith('undisclosed') }).length;
         if (cells + rest !== csvData.length) out.dropped.push(`${dim}: ${cells}+${rest}≠${csvData.length}`);
+        if (restShown !== rest) out.dropped.push(`${dim}: N/A cell shows ${restShown}, independent count ${rest}`);
       });
       // Ratings grid (dots) and Spectrum grid (numbers) agree cell by cell
       const counts = sel => [...document.querySelectorAll(sel + ' td[data-column]')].map(td => +(td.getAttribute('data-count') || 0));
       const a = counts('.type-1'), b = counts('.type-2');
-      out.gridsAgree = a.length === 40 && a.join() === b.join();
+      out.gridsAgree = a.length === 48 && a.join() === b.join();
       // Year chart: one study = one year, so distinct-study labels add up to all studies
       document.getElementById('stackBy').value = 'Participant Groups'; document.getElementById('plotMode').value = 'count';
       $('#plotFilter').dropdown('set selected', 'Year'); viewsDirty.plot = true; renderVisibleViews('Show-plot'); await wait(80);
@@ -524,8 +526,8 @@ async function collectGolden(page) {
       slider.value = 20; slider.dispatchEvent(new Event('input'));
       return out;
     });
-    check('no study is dropped from any grid row (cells + N/A + undisclosed = all)', !gc.dropped.length, gc.dropped.join('; '));
-    check('Ratings and Spectrum grids show the same 40 counts', gc.gridsAgree);
+    check('every grid row adds up to all studies; the N/A cell equals an independent count', !gc.dropped.length, gc.dropped.join('; '));
+    check('Ratings and Spectrum grids show the same 48 counts (incl. N/A)', gc.gridsAgree);
     check('Year chart: distinct studies over all years = all studies', gc.yearTotal === 216, `${gc.yearTotal}`);
     check('chart menu offers Year, not identifiers or empty columns', gc.plotMenu.hasYear && !gc.plotMenu.banned.length && !gc.plotMenu.emptyCols.length, JSON.stringify(gc.plotMenu));
     check('intensity slider changes the colour scale legend', gc.legend.before && gc.legend.after && gc.legend.before !== gc.legend.after, JSON.stringify(gc.legend));

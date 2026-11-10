@@ -3664,3 +3664,19 @@ ul li {
     outline: 3px solid var(--ds-focus-ring, #2563eb);
     outline-offset: 2px
 }
+
+/* Grids: "N/A or not stated" column (neutral, outside the colour scale) */
+.spectrumTable .rest-col {
+    font-size: .75rem;
+    color: var(--ds-text-secondary);
+    max-width: 6rem;
+    white-space: normal
+}
+
+.spectrumTable td.rest-cell {
+    background: repeating-linear-gradient(45deg, transparent 0 6px, rgb(148 163 184 / .18) 6px 8px) !important;
+    color: var(--ds-text-primary);
+    text-align: center;
+    font-weight: 600;
+    border-left: 3px double var(--ds-border-subtle) !important
+}

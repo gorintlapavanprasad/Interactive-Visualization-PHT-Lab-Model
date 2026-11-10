@@ -162,8 +162,8 @@ cross-checked independently against the raw data.
 
 1. ~~Not fully offline~~ (fixed: every file is served from this repo; section 12).
 2. ~~No data pipeline~~ (fixed: `tools/build-data.js`, section 10).
-3. ~~Grids without a scale~~ (fixed: viridis scale, legend, counts in cells). Still open: "Undisclosed"
-   and "Not applicable" answers aren't shown, so rows don't add up to N.
+3. ~~Grids without a scale; rows not adding up~~ (fixed: viridis scale, legend, counts in cells, and an
+   "N/A or not stated" column so every row adds up to all studies; section 21).
 4. ~~Plot dropdown visible on grid tabs~~ (fixed).
 5. ~~Desktop-only shield~~ (fixed: the layout reflows at 200% and 400% zoom). The phone layout is
    usable but not polished.
@@ -197,7 +197,7 @@ infrastructure, **P3** = nice to have.
 | T2 | P0 | ✅ **Done.** `tools/build-data.js` (section 10) | One command regenerates `data.js`; audit passes |
 | T3 | P0 | Partly done: the pipeline now fixes answer spellings, DOIs and duplicate IDs automatically. Remaining: fix the column-name typos in the Covidence template (`Casegivers`, `Motor of physical impairment`, `Brainstormming`, `Convienience`) | Template typos gone |
 | T4 | P1 | ✅ **Done** (section 11): live counts beside every filter option; zero-result options greyed out | Counts update with filters |
-| T5 | P1 | ✅ Mostly done (viridis scale, legend, counts in cells). Remaining: a per-row "N/A / undisclosed" column | Rows sum to N |
+| T5 | P1 | ✅ **Done** (sections 8, 21): viridis scale, legend, counts in cells, "N/A or not stated" column | Rows sum to N |
 | T6 | P1 | ✅ **Done** (section 15): "Colour bars by" any coded column or none; "Show" counts or percentages; framework order; "Not recorded" segment | — |
 | T7 | P1 | ✅ **Done** (section 16): Cards/Table views, sortable columns, sort controls, page size, column chooser | — |
 | T8 | P1 | ✅ **Done** (section 17): Gaps tab, a heatmap of any two dimensions with gaps highlighted | — |
@@ -749,3 +749,17 @@ escaping, keys, all 216 studies) and 10 browser tests (clean default address, wh
 records, **full round trip in a fresh browser: identical studies, tab and settings**, Copy link,
 unsafe link values, pasted links, CSV and BibTeX contents vs the filtered studies, the empty case,
 the header control per tab). Total: **207 tests**.
+
+## 21. Grids: every row adds up (2026-11-10)
+
+The Ratings and Spectrum grids now end each row with a grey, hatched **"N/A or not stated"** cell.
+It holds the studies that are in none of the row's five answer cells: rated *Not applicable*,
+*Undisclosed/Unknown*, or not rated at all. With it, **every row adds up to all the filtered
+studies**. For example, Fun-First: 53 + 19 + 41 + 41 + 30 + 32 (N/A) = 216.
+
+- It sits outside the colour scale (grey and hatched, separated by a double line), so it can't be
+  read as "few studies", and it always shows its number.
+- Click it, or press Enter, to list those studies. Screen readers hear "…: not applicable or not
+  stated, 32 of 216 studies".
+- Tests: the N/A cell must equal an independent count for every row, and all six cells must add up
+  to the total. The golden reference values for the five answer cells are unchanged.

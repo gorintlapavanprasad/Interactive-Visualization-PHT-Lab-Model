@@ -31,10 +31,17 @@ const SPECTRUM_ROWS = [
 const SPECTRUM_DIMS = SPECTRUM_ROWS.map(r => r.dim);
 const SPECTRUM_SCALE = ['Totally', 'Mostly', 'Both', 'Mostly', 'Totally'];
 
+// Each row ends with an "N/A or not stated" cell: studies in none of the five
+// answer cells (Not applicable, Undisclosed, or not rated), so every row adds
+// up to all the filtered studies.
+const SPECTRUM_REST_LABEL = 'N/A or not stated';
+
 function buildSpectrumTables() {
-    const header = '<tr class="ratings"><td></td>' + SPECTRUM_SCALE.map(s => `<th scope="col">${s}</th>`).join('') + '<td></td></tr>';
+    const header = '<tr class="ratings"><td></td>' + SPECTRUM_SCALE.map(s => `<th scope="col">${s}</th>`).join('') +
+        `<td></td><th scope="col" class="rest-col">${SPECTRUM_REST_LABEL}</th></tr>`;
     const body = SPECTRUM_ROWS.map(r => `<tr data-row="${escapeHtml(r.dim)}"><th scope="row">${escapeHtml(r.left)}</th>` +
-        r.cells.map(c => `<td data-column="${escapeHtml(c)}"></td>`).join('') + `<th>${escapeHtml(r.right)}</th></tr>`).join('');
+        r.cells.map(c => `<td data-column="${escapeHtml(c)}"></td>`).join('') + `<th>${escapeHtml(r.right)}</th>` +
+        `<td class="rest-cell" data-rest="1" data-column="${SPECTRUM_REST_LABEL}"></td></tr>`).join('');
     document.querySelectorAll('.spectrumTable').forEach(t => { t.innerHTML = `<tbody>${header}${body}</tbody>` })
 }
 
@@ -73,6 +80,10 @@ function displaySpectrum() {
     const total = filteredDataTmp.length;
     document.querySelectorAll('.spectrumTable tr[data-row]').forEach(tr => {
         const dim = tr.getAttribute('data-row');
+        // studies that land in one of the five answer cells of this row
+        const inCells = new Set();
+        tr.querySelectorAll('td[data-column]:not([data-rest])').forEach(td => ((buckets[dim] || {})[canon(td.getAttribute('data-column'))] || []).forEach(u => inCells.add(u)));
+        const restUids = filteredDataTmp.filter(r => !inCells.has(r.__uid)).map(r => r.__uid);
         tr.querySelectorAll('[data-column]').forEach(el => {
             // reset previous render (cheap: no per-cell popup widgets any more)
             el.style.boxShadow = "";
@@ -86,10 +97,23 @@ function displaySpectrum() {
             el.textContent = "";
 
             const label = el.getAttribute('data-column');
-            const uids = (buckets[dim] && buckets[dim][canon(label)]) || [];
+            const isRest = el.hasAttribute('data-rest');
+            const uids = isRest ? restUids : ((buckets[dim] && buckets[dim][canon(label)]) || []);
             const count = uids.length;
             const pct = total ? Math.round(100 * count / total) : 0;
             el.setAttribute("data-label", label);
+            if (isRest) {
+                // neutral grey, never part of the colour scale; always shows its number
+                el.innerHTML = `<span class="cell-count" aria-hidden="true">${count}</span>`;
+                el.setAttribute("aria-label", `${dim}: not applicable or not stated, ${count} of ${total} studies, ${pct} percent`);
+                el.setAttribute("data-count", count);
+                if (!count) return;
+                el.setAttribute("tabindex", "0");
+                el.setAttribute("role", "button");
+                el.onclick = () => showSpectrumStudies(`${SPECTRUM_DIMS.includes(dim) ? dim.replace(/\s*\(.*\)$/, '') : dim}: ${SPECTRUM_REST_LABEL}`, uids);
+                el.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.click() } };
+                return
+            }
             el.setAttribute("data-pct", pct);
             el.setAttribute("aria-label", `${label}: ${count} of ${total} studies, ${pct} percent`);
             if (!count || !total) {

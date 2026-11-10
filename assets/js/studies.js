@@ -428,7 +428,7 @@ function renderTable(data, innerEdit) {
                 }, 320)
             }
         });
-        fixDropdownAccessibility($("#plotFilter"), "Chart: group studies by")
+        fixDropdownAccessibility($("#plotFilter"), "Group bars by")
     }
     // Charts are expensive; only redraw the view the user can actually see.
     // Hidden views are marked dirty and redrawn when their tab is opened.

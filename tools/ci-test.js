@@ -270,6 +270,43 @@ async function collectGolden(page) {
     check('chart choices are saved in the Excel export', chart.exported.includes('chartColourBy=Symmetrical vs. Asymmetrical') && chart.exported.includes('chartShow=count'), chart.exported.join(', '));
     check('changing chart options reuses one chart (no leaks)', chart.instances === 1, `${chart.instances} chart instances`);
 
+    // Plot tab layout and labels (from a screenshot review)
+    {
+      const p = await browser.newPage();
+      await p.setViewport({ width: 1920, height: 1080 });
+      await p.evaluateOnNewDocument(() => localStorage.setItem('pht_lab_tour_seen', 'true'));
+      await p.goto(base, { waitUntil: 'networkidle0' });
+      await p.waitForFunction(() => window.plotState && plotState.chart);
+      const r = await p.evaluate(() => {
+        const c = plotState.chart;
+        const cats = c.xAxis[0].categories;
+        const years = [...new Set(csvData.map(r => +r.Year).filter(Boolean))];
+        const lab = document.querySelector('#plotIt .highcharts-xaxis-labels').getBoundingClientRect();
+        const btns = [...document.querySelectorAll('.buttons-container button')].map(b => ({ text: b.textContent.trim(), icon: b.querySelector('i')?.className || '' }));
+        const label = document.getElementById('plotFilterLabel');
+        const input = document.querySelector('#plotFilter input.search');
+        return {
+          xLabelsBottom: lab.bottom, vh: innerHeight,
+          yearsContinuous: cats.length === Math.max(...years) - Math.min(...years) + 1 && cats.every((y, i) => +y === Math.min(...years) + i),
+          sum: plotState.totals.reduce((a, b) => a + b, 0), n: csvData.length,
+          yTitle: c.yAxis[0].options.title.text,
+          btns,
+          labelVisible: !!label && label.offsetWidth > 0 && /group bars by/i.test(label.textContent),
+          inputName: input && input.getAttribute('aria-label'),
+          stackOption: [...document.getElementById('stackBy').options].find(o => o.value === 'Participant Groups')?.textContent,
+          legendTitle: c.legend.options.title.text
+        };
+      });
+      check('1920×1080: the year labels under the chart are on screen', r.xLabelsBottom <= r.vh, `labels end at ${Math.round(r.xLabelsBottom)}px, window ${r.vh}px`);
+      check('Year chart shows every year, including years with no studies', r.yearsContinuous && r.sum === r.n, `continuous ${r.yearsContinuous}, sum ${r.sum}/${r.n}`);
+      check('stacked count axis says a study can count in more than one colour', /more than once/.test(r.yTitle), r.yTitle);
+      check('sidebar tool buttons have visible names (Reset, Import, Export, Redraw)', r.btns.map(b => b.text).join() === 'Reset,Import,Export,Redraw', r.btns.map(b => b.text).join());
+      check('Import shows an upload icon and Export a download icon', /upload/.test(r.btns[1].icon) && /download/.test(r.btns[2].icon) && !/trash/.test(r.btns[0].icon), r.btns.map(b => b.icon).join(' | '));
+      check('the bar grouping selector has a visible label that matches its name', r.labelVisible && r.inputName === 'Group bars by', `visible ${r.labelVisible}, name "${r.inputName}"`);
+      check('colour option and legend use the same wording', r.legendTitle === 'Colour: ' + r.stackOption, `"${r.stackOption}" vs "${r.legendTitle}"`);
+      await p.close();
+    }
+
     // ------------------------------------------------- study list (table) ----
     console.log('\nstudy list: cards / table');
     await tab(page, 'Show-data');

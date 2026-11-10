@@ -3680,3 +3680,53 @@ ul li {
     font-weight: 600;
     border-left: 3px double var(--ds-border-subtle) !important
 }
+
+/* Plot tab: the chart fills the space left under its controls (it used to be
+   as tall as the whole panel, pushing the axis labels below the window). */
+#show-plot-pane.active {
+    display: flex;
+    flex-direction: column
+}
+
+#show-plot-pane>#visual-panel.active {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column
+}
+
+#visual-panel>#plotIt {
+    flex: 1 1 auto;
+    min-height: 340px;
+    height: auto
+}
+
+#visual-panel>.plot-error:empty {
+    display: none
+}
+
+/* Visible label for the bar grouping selector */
+.plotOptionsDiv {
+    display: flex;
+    align-items: center;
+    gap: 8px
+}
+
+.plot-by-label {
+    white-space: nowrap;
+    font-size: .85rem;
+    font-weight: 600;
+    color: var(--ds-text-secondary)
+}
+
+.plotOptionsDiv>#plotFilter {
+    flex: 1 1 auto;
+    min-width: 0
+}
+
+/* Sidebar tool buttons show their names, not just icons */
+.buttons-container .ui.button {
+    white-space: nowrap;
+    padding-left: .4em;
+    padding-right: .4em
+}

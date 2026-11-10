@@ -548,26 +548,25 @@
             </div>
           </div>
           <div class="buttons-container">
-            <button class="ui fluid button" data-action="reset" data-tooltip="Remove Filters"
-              aria-label="Reset all filters">
-              <i class="trash alternate icon"></i>
+            <button class="ui fluid button" data-action="reset" aria-label="Reset all filters">
+              <i class="undo icon" aria-hidden="true"></i> Reset
             </button>
 
             <div class="import-wrapper">
-              <button id="import-data-button" class="ui fluid button" data-tooltip="Import Filters"
-                aria-label="Import filter settings">
-                <i class="download icon"></i>
+              <button id="import-data-button" class="ui fluid button"
+                aria-label="Import settings from an exported Excel file">
+                <i class="upload icon" aria-hidden="true"></i> Import
               </button>
               <input type="file" id="import-file-input" accept=".xlsx" style="display: none" />
             </div>
 
-            <button class="ui fluid button" data-action="export-xlsx" data-tooltip="Export Filters"
-              aria-label="Export current data">
-              <i class="upload icon"></i>
+            <button class="ui fluid button" data-action="export-xlsx"
+              aria-label="Export filtered studies and settings to Excel">
+              <i class="download icon" aria-hidden="true"></i> Export
             </button>
 
-            <button class="ui fluid button" data-action="refresh-chart" data-tooltip="Reset Chart" aria-label="Refresh Chart">
-              <i class="redo icon"></i>
+            <button class="ui fluid button" data-action="refresh-chart" aria-label="Redraw chart">
+              <i class="sync icon" aria-hidden="true"></i> Redraw
             </button>
           </div>
         </div>
@@ -607,6 +606,7 @@
               aria-hidden="false">
             
 
+                  <span class="plot-by-label" id="plotFilterLabel" aria-hidden="true">Group bars by</span>
                   <div class="ui search fluid selection dropdown" id="plotFilter">
      
     <input name="tags" type="hidden">

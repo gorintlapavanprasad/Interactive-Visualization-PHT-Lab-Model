@@ -14,7 +14,7 @@ function initChartControls() {
     if (!sel || sel.options.length) return;
     const add = (value, text) => { const o = document.createElement('option'); o.value = value; o.textContent = text; sel.appendChild(o) };
     add('', 'None (one colour)');
-    add(STACK_DEFAULT, 'Participant groups');
+    add(STACK_DEFAULT, shortLabel(STACK_DEFAULT));
     codedColumns().filter(c => c !== STACK_DEFAULT && csvData.some(r => String(r[c] ?? '').trim()))
         .forEach(c => add(c, shortLabel(c)));
     sel.value = STACK_DEFAULT;
@@ -58,7 +58,18 @@ function Drawplot(PlotFilter) {
             segs.forEach(g => { segSeen.add(g); stackMap[xVal][g] = (stackMap[xVal][g] || 0) + 1 })
         })
     });
-    const categories = orderValues(PlotFilter, Object.keys(stackMap));
+    let categories = orderValues(PlotFilter, Object.keys(stackMap));
+    // Years form a timeline: show years with no studies as empty bars instead
+    // of skipping them (skipping squeezed the gaps out of the trend).
+    if (PlotFilter === 'Year' && categories.length && categories.every(c => /^\d{4}$/.test(c))) {
+        const ys = categories.map(Number);
+        categories = [];
+        for (let y = Math.min(...ys); y <= Math.max(...ys); y++) {
+            const c = String(y);
+            if (!stackMap[c]) { stackMap[c] = {}; studyCount[c] = 0 }
+            categories.push(c)
+        }
+    }
     const studyTotals = categories.map(c => studyCount[c]);
     const segNames = stackCol ? orderValues(stackCol, [...segSeen]) : ['Studies'];
     const nColours = segNames.filter(s => s !== NOT_RECORDED).length;
@@ -217,7 +228,10 @@ function Drawplot(PlotFilter) {
             max: mode === 'percent' ? 100 : null,
             gridLineColor: ds.borderSubtle,
             title: {
-                text: mode === 'percent' ? (stackCol ? '% of answers in the bar' : '% of filtered studies') : 'No. of studies',
+                // Stacked counts: a study with several colour answers is in several
+                // segments, so bar height can exceed the distinct-study number on top.
+                text: mode === 'percent' ? (stackCol ? '% of answers in the bar' : '% of filtered studies')
+                    : (stackCol ? 'Studies per colour (can count more than once)' : 'No. of studies'),
                 style: {
                     color: ds.textSecondary
                 }

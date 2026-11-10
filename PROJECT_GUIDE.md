@@ -203,7 +203,7 @@ infrastructure, **P3** = nice to have.
 | T8 | P1 | ✅ **Done** (section 17): Gaps tab, a heatmap of any two dimensions with gaps highlighted | — |
 | T9 | P2 | ✅ **Done** (section 12): no requests to other servers | Works with network off |
 | T10 | P2 | ✅ Automated part done (0 axe violations; reflow at 400% zoom; see section 8). Tour updated to cover the new features (section 22). Remaining: sessions with real screen-reader users | Signed off by disabled testers |
-| T11 | P2 | ✅ **Done** (section 13): GitHub Actions runs lint, the data audit, 102 unit tests and 109 browser checks on every push and pull request (sections 19–22) | CI green on every push |
+| T11 | P2 | ✅ **Done** (section 13): GitHub Actions runs lint, the data audit, 102 unit tests and 116 browser checks on every push and pull request (sections 19–23) | CI green on every push |
 | T12 | P2 | ✅ **Done** (section 18): 10 focused script files, ESLint in CI, jQuery 3.7.1, grids from config | — |
 | T13 | P2 | ✅ Mostly done (section 14): unused files and dead code removed, README added. Remaining (owner's decisions): choose a project LICENSE, confirm the Highcharts licence, archive the old DataSpectra repo | — |
 | T14 | P2 | ✅ **Done.** Live on GitHub Pages | Public URL |
@@ -801,3 +801,26 @@ Found while adding this:
 The guided tour also gained a step that points out **Copy link** and the CSV/BibTeX downloads.
 
 Total: **211 tests** (102 unit + 109 browser), plus lint and the data audit.
+
+## 23. Plot tab fixes from a screenshot review (2026-11-10)
+
+A review of the Plot tab at 1920 × 1080 found seven problems. All are fixed, and each has a test that fails on the old code:
+
+1. **Year labels were off screen.** The chart was as tall as the whole panel plus the controls above it, so
+   the axis labels sat below the window. The chart now fills only the space left under its controls.
+2. **Years with no studies were skipped** (1995, 1997, 1999, 2001), which squeezed the gaps out of the
+   timeline. The Year chart now shows every year in the range; empty years are labelled 0.
+3. **The y-axis said "No. of studies" when bars are coloured.** A study with several answers (for
+   example, people with disabilities *and* caregivers) is in several colours. So a bar can be taller than
+   the distinct-study number above it: in 2023 it reaches 28 for 21 studies. The axis now reads "Studies per
+   colour (can count more than once)". The number above each bar is still the distinct count.
+4. **The Import and Export icons were swapped** (Import showed a download arrow, Export an upload arrow),
+   and Reset used a trash can.
+5. **The four sidebar buttons were icons only.** Their tooltips disagreed with their spoken names
+   ("Reset Chart" for a button that redraws). They now show **Reset, Import, Export, Redraw**.
+6. **The bar grouping menu had no visible label.** It now says **Group bars by**, which is also its
+   spoken name.
+7. **Wording:** the colour menu said "Participant groups" while the legend said "Participant Groups";
+   both now use the column name.
+
+Total: **218 tests** (102 unit + 116 browser), plus lint and the data audit.

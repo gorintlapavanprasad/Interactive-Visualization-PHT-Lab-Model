@@ -672,6 +672,19 @@
             <div class="ui tab active" id="visual-panel" data-tab="Show-plot/visual" role="tabpanel"
               aria-labelledby="tab-visual">
               <h3 class="sr-only">Interactive Data Graph: Distribution and Frequency Trends</h3>
+              <div class="chart-controls" role="group" aria-label="Chart options">
+                <div class="chart-control">
+                  <label for="stackBy">Colour bars by</label>
+                  <select id="stackBy"></select>
+                </div>
+                <div class="chart-control">
+                  <label for="plotMode">Show</label>
+                  <select id="plotMode">
+                    <option value="count">Number of studies</option>
+                    <option value="percent">Percentages</option>
+                  </select>
+                </div>
+              </div>
               <div id="plotIt" role="group" aria-label="Interactive Data Graph. Use arrow keys to explore data points."
                 tabindex="0"></div>
               <div class="plot-error"></div>

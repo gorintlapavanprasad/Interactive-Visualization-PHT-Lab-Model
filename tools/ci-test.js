@@ -218,6 +218,55 @@ async function collectGolden(page) {
     check('AND across groups never returns more studies', inv.c <= inv.a, `${inv.a} -> ${inv.c}`);
     check('reset shows every study', inv.reset === inv.total, `${inv.reset}/${inv.total}`);
 
+    // ---------------------------------------------------- chart controls ----
+    console.log('\nchart controls');
+    await tab(page, 'Show-plot');
+    const chart = await page.evaluate(async () => {
+      const wait = () => new Promise(r => setTimeout(r, 50));
+      applyFilters('reset'); await wait();
+      const set = async (x, stack, mode) => {
+        document.getElementById('stackBy').value = stack;
+        document.getElementById('plotMode').value = mode;
+        $('#plotFilter').dropdown('set selected', x);
+        viewsDirty.plot = true; renderVisibleViews(); await wait();
+        return plotState.chart;
+      };
+      const out = {};
+      // 1. Percentages without colouring: bar = % of filtered studies with that answer
+      let c = await set('Study Method', '', 'percent');
+      const iv = c.xAxis[0].categories.indexOf('Interview');
+      const ivCount = csvData.filter(r => canonSet(r, 'Study Method').has('interview')).length;
+      out.noneInterview = { shown: c.series[0].points[iv].y, expected: Math.round(1000 * ivCount / csvData.length) / 10 };
+      // 2. Percent-stacked bars each add up to 100%, with n under each bar
+      c = await set('Fun-First vs. Utility-First (Initial Design Intention)', 'Community of focus', 'percent');
+      out.pctSums = c.xAxis[0].categories.map((_, i) => Math.round(c.series.reduce((a, s) => a + (s.points[i]?.percentage || 0), 0)));
+      out.nLabels = [...document.querySelectorAll('#plotIt .highcharts-xaxis-labels text')].filter(t => /n=\d+/.test(t.textContent)).length;
+      // 3. Framework answers in framework order, not alphabetical
+      out.order = c.xAxis[0].categories.slice(0, 5);
+      // 4. Data table shows study counts that match the chart
+      const firstRow = [...document.querySelectorAll('#sr-table-body tr:first-child td')].map(td => +td.textContent);
+      out.tableMatches = c.series.every((s, i) => (s.points[0].options.count ?? s.points[0].y) === firstRow[i]);
+      // 5. Every study is accounted for in the colours ("Not recorded" for blanks)
+      c = await set('Year', 'Symmetrical vs. Asymmetrical', 'count');
+      const blank = csvData.filter(r => !String(r['Symmetrical vs. Asymmetrical'] ?? '').trim()).length;
+      out.notRecorded = { blank, series: c.series.some(s => s.name === 'Not recorded') };
+      // 6. Choices saved in the Excel export
+      const orig = XLSX.writeFile; let rows = [];
+      XLSX.writeFile = wb => { rows = XLSX.utils.sheet_to_json(wb.Sheets['Filter Settings']) };
+      exportFilteredData(); XLSX.writeFile = orig;
+      out.exported = rows.filter(r => /^chart/.test(r['Filter Name'])).map(r => `${r['Filter Name']}=${r.Value}`);
+      out.instances = Highcharts.charts.filter(Boolean).length;
+      await set('Year', 'Participant Groups', 'count');
+      return out;
+    });
+    check('"Percentages" without colour = % of filtered studies', chart.noneInterview.shown === chart.noneInterview.expected, JSON.stringify(chart.noneInterview));
+    check('"Percentages" with colour: every bar adds up to 100%, with n under each bar', chart.pctSums.every(v => v === 100) && chart.nLabels === chart.pctSums.length, `sums ${[...new Set(chart.pctSums)]}, n-labels ${chart.nLabels}/${chart.pctSums.length}`);
+    check('framework answers are shown in framework order', chart.order[0] === 'Totally fun first' && chart.order[4] === 'Totally utility first', chart.order.join(' | '));
+    check('chart data table matches the chart', chart.tableMatches);
+    check('studies without an answer appear as "Not recorded"', !chart.notRecorded.blank || chart.notRecorded.series, JSON.stringify(chart.notRecorded));
+    check('chart choices are saved in the Excel export', chart.exported.includes('chartColourBy=Symmetrical vs. Asymmetrical') && chart.exported.includes('chartShow=count'), chart.exported.join(', '));
+    check('changing chart options reuses one chart (no leaks)', chart.instances === 1, `${chart.instances} chart instances`);
+
     // ------------------------------------------------------------ budget ----
     console.log('\nspeed and size budget');
     await tab(page, 'Show-plot');

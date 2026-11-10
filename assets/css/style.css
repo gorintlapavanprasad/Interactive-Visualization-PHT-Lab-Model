@@ -3184,3 +3184,41 @@ ul li {
     border: 1px dashed var(--ds-text-secondary, #475569);
     color: var(--ds-text-secondary, #475569)
 }
+
+/* Chart controls (Colour bars by / Show) */
+.chart-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 24px;
+    align-items: flex-end;
+    padding: 12px 16px 4px;
+    text-align: left
+}
+
+.chart-control {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 200px
+}
+
+.chart-control label {
+    font-size: .8rem;
+    font-weight: 700;
+    color: var(--ds-text-primary)
+}
+
+.chart-control select {
+    min-height: 36px;
+    padding: 4px 8px;
+    border: 1px solid var(--ds-border-strong, #64748b);
+    border-radius: 6px;
+    background: var(--ds-bg-panel, #fff);
+    color: var(--ds-text-primary, #0f172a);
+    font: inherit
+}
+
+.chart-control select:focus-visible {
+    outline: 3px solid var(--ds-focus-ring, #2563eb);
+    outline-offset: 2px
+}

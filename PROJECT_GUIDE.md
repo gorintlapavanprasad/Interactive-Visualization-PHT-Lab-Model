@@ -157,7 +157,7 @@ cross-checked independently against the raw data.
    usable but not polished.
 6. ~~Filter options without counts~~ (fixed: each option shows how many studies it would return,
    and zero-result options are greyed out; section 11).
-7. **The chart always stacks by Participant Groups**; there's no choice of stack variable and no % view.
+7. ~~Chart always coloured by participant groups, no % view~~ (fixed: chart controls; section 15).
 8. The Data tab shows only cards (5 per page). There's no sortable table and no page-size choice.
 9. Accessibility: axe now reports 0 WCAG 2.2 AA violations (section 8). Still open: manual testing
    with real NVDA, JAWS and VoiceOver users, a shorter tour, and Highcharts legend buttons that are
@@ -187,12 +187,12 @@ infrastructure, **P3** = nice to have.
 | T3 | P0 | Partly done: the pipeline now fixes answer spellings, DOIs and duplicate IDs automatically. Remaining: fix the column-name typos in the Covidence template (`Casegivers`, `Motor of physical impairment`, `Brainstormming`, `Convienience`) | Template typos gone |
 | T4 | P1 | ✅ **Done** (section 11): live counts beside every filter option; zero-result options greyed out | Counts update with filters |
 | T5 | P1 | ✅ Mostly done (viridis scale, legend, counts in cells). Remaining: a per-row "N/A / undisclosed" column | Rows sum to N |
-| T6 | P1 | Chart controls: choose the stack-by variable, count or % view; hide the plot menu on grid tabs | — |
+| T6 | P1 | ✅ **Done** (section 15): "Colour bars by" any coded column or none; "Show" counts or percentages; framework order; "Not recorded" segment | — |
 | T7 | P1 | Data tab: sortable table view, page-size selector, column chooser | — |
 | T8 | P1 | Cross-tab heatmap: any two dimensions (e.g. Community × Study Method) to show research gaps | — |
 | T9 | P2 | ✅ **Done** (section 12): no requests to other servers | Works with network off |
 | T10 | P2 | ✅ Automated part done (0 axe violations; reflow at 400% zoom; see section 8). Remaining: sessions with real screen-reader users, shorter tour | Signed off by disabled testers |
-| T11 | P2 | ✅ **Done** (section 13): GitHub Actions runs the data audit and 45 browser checks on every push and pull request | CI green on every push |
+| T11 | P2 | ✅ **Done** (section 13): GitHub Actions runs the data audit and 52 browser checks on every push and pull request | CI green on every push |
 | T12 | P2 | Code health: split `script.js` into modules, ESLint, upgrade jQuery, generate grid rows from config | — |
 | T13 | P2 | ✅ Mostly done (section 14): unused files and dead code removed, README added. Remaining (owner's decisions): choose a project LICENSE, confirm the Highcharts licence, archive the old DataSpectra repo | — |
 | T14 | P2 | ✅ **Done.** Live on GitHub Pages | Public URL |
@@ -404,7 +404,7 @@ Run the same tests on your own computer (needs Node 18+ and Google Chrome):
 cd tools && npm ci && npm test
 ```
 
-### What is checked (45 checks)
+### What is checked (52 checks)
 
 | Area | Checks |
 |---|---|
@@ -413,6 +413,7 @@ cd tools && npm ci && npm test
 | Real dropdowns | Add 2 tags, remove 1 → same as 1 tag; clearing tags shows every study |
 | Known results | 25 reference values: filter results (Interview = 92, …), search results (blind = 78, …), the top search result, every grid row and the number of empty options |
 | Logic | OR within a group never gives fewer studies; AND across groups never gives more; reset shows all |
+| Chart controls | % without colour = % of filtered studies; with colour every bar adds up to 100% with n under it; framework order; data table matches the chart; blanks shown as "Not recorded"; choices saved in the export; one chart instance |
 | Accessibility | axe-core finds 0 WCAG 2.2 AA violations on every tab; every focusable control (including the settings menu) has a name a screen reader can read; keyboard filtering works and the count is announced; at 200% zoom the filters, the chart and its data table are usable with no horizontal scrolling |
 | Offline | No requests to outside servers; no missing files; fonts and icons load |
 | Speed and size | Page under 5,000 elements; a filter change on the chart tab under 1.5 s |
@@ -482,3 +483,40 @@ Now every file in the repo is used by the site, the tools or the docs. The remai
 - A **LICENSE** for the project's own code and data (e.g. MIT for code, CC BY 4.0 for data).
 - Whether the **Highcharts** use is covered by its non-commercial terms.
 - Whether to **archive** the old `dua-fs/DataSpectra` repository and the PhtDataVisualization site.
+
+## 15. Chart controls (2026-11-09)
+
+Above the chart (Plot tab → Visual) are two dropdowns:
+
+- **Colour bars by:** *Participant groups* (the default, as before), *None (one colour)*, or any coded
+  column: the eight framework spectra, Experiential Play Value, Study Method and its sub-methods,
+  Technology, Context, Community of focus, User involvement, Use of proxies, Recruitment, Issue
+  addressed or Contribution type.
+- **Show:**
+  - *Number of studies*.
+  - *Percentages* with a colour chosen: each bar is 100%, split by the colour variable. The number
+    of studies (n) is shown under each bar.
+  - *Percentages* with no colour: bar height = % of the filtered studies that have that answer.
+
+Details:
+- Bars and colours for framework answers follow the **framework's order** (Totally fun first →
+  Totally utility first), not alphabetical order. Numbers (years) are in numeric order.
+- Studies with no answer in the colour column get a grey **"Not recorded"** segment, so every study
+  is accounted for. Free-text "Other: …" answers are grouped as "Other", the same way the filters
+  treat them. The long "Undisclosed/Unknown, but the paper does include…" label is shortened to
+  "Undisclosed/Unknown".
+- Colours are viridis with as many shades as there are answers (up to 12). "Not recorded" is grey.
+- The tooltip, the screen-reader description of each bar segment and the data table all follow the
+  chosen view (e.g. "Blind or low vision: 37 studies, 36% of this bar. 92 distinct studies in this
+  bar"). The data table always shows study counts.
+- Both choices are saved in the Excel export and restored on import (round trip checked).
+- Changing the options updates the existing chart instead of re-creating it. This avoids a flash and
+  an "AudioContext closed" error from Highcharts' sound feature.
+
+Checked on 2026-11-09:
+- Interview = 92 of 216 studies = 42.6% in the no-colour percentage view.
+- Every percentage-stacked bar adds up to exactly 100%.
+- Framework order, "Not recorded", the export/import round trip, dark mode and the one-chart
+  instance all behave as described.
+- No errors.
+- CI now runs 52 checks.

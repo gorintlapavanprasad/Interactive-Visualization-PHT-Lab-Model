@@ -17,7 +17,8 @@ participants.
   abbreviations such as VR, BLV, DHH, IDD and ASD. Results are ranked, with matches highlighted.
 - **Filter** by any of 190 framework and characteristic options. Each option shows how many studies
   it would return, and options with no results are greyed out.
-- **Plot** any column, stacked by participant group, with a data-table view.
+- **Plot** any column. Colour the bars by any coded column (or none), show counts or percentages,
+  and get a data-table view.
 - **Ratings and Spectrum grids** show where studies sit on each spectrum (viridis colour scale with
   counts in the cells). Click a cell to list its studies.
 - **Open each paper** directly through its DOI.
@@ -59,7 +60,7 @@ updates the test values and runs the tests. Then commit `assets/js/data.js` and
 cd tools && npm ci && npm test
 ```
 
-The data audit plus 45 browser checks: filter counts, known results, accessibility, offline loading,
+The data audit plus 52 browser checks: filter counts, known results, accessibility, offline loading,
 page size and speed. They run automatically in GitHub Actions. Details are in `PROJECT_GUIDE.md` §13.
 
 ## Project layout

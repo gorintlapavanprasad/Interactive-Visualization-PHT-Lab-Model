@@ -784,7 +784,78 @@ function animateOptions(viewType) {
 }
 const getDSVar = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
-var plotState = { chart: null, totals: [], xLabel: '' };
+var plotState = { chart: null, totals: [], xLabel: '', configKey: '', mode: 'count', stackLabel: '' };
+
+// ---------------------------------------------------------------------------
+// Chart controls: "Colour bars by" (any coded column, or none) and
+// "Show" (number of studies / percentages). Native <select>s for accessibility.
+// ---------------------------------------------------------------------------
+const NOT_RECORDED = 'Not recorded';
+const STACK_DEFAULT = 'Participant Groups';
+
+const stripExample = v => String(v).replace(/\s*\((?:i\.e\.|e\.g\.)[^)]*\)\s*$/, '');
+// Chart label for an answer: drop the (i.e., …) example, group free-text
+// "Other: …" answers as "Other" (like the filters do), shorten the long
+// "Undisclosed/Unknown, but the paper…" option.
+function displayLabel(v) {
+    const s = stripExample(v).trim();
+    if (canon(s).startsWith('other')) return 'Other';
+    if (/^undisclosed\/unknown/i.test(s)) return 'Undisclosed/Unknown';
+    return s
+}
+const shortLabel = col => col === 'Year' ? 'Year' : String(col).replace(/\s*\(.*\)\s*:?$/, '');
+
+// The coded columns (framework, methods, participants…) in FILTER_SPECS order.
+function codedColumns() {
+    const cols = [];
+    for (const g of Object.values(FILTER_SPECS)) for (const c of Object.keys(g)) if (!cols.includes(c)) cols.push(c);
+    return cols
+}
+
+// Order answers the way the framework lists them (Totally fun -> Totally utility),
+// numbers numerically, anything else alphabetically; "Not recorded" last.
+function orderValues(col, labels) {
+    let spec = null;
+    for (const g of Object.values(FILTER_SPECS)) if (g[col]) spec = Object.values(g[col]).map(canon);
+    const nr = labels.filter(l => l === NOT_RECORDED);
+    const rest = labels.filter(l => l !== NOT_RECORDED);
+    if (rest.length && rest.every(k => k !== '' && !isNaN(Number(k)))) return rest.sort((a, b) => Number(a) - Number(b)).concat(nr);
+    const idx = l => {
+        if (!spec) return -1;
+        const c = canon(l);
+        let i = spec.indexOf(c);
+        if (i < 0 && c.startsWith('other')) i = spec.indexOf('other');
+        if (i < 0) i = spec.findIndex(x => x.startsWith(c)); // shortened labels
+        return i
+    };
+    return rest.sort((a, b) => {
+        const ia = idx(a), ib = idx(b);
+        if (ia >= 0 && ib >= 0) return ia - ib;
+        if (ia >= 0) return -1;
+        if (ib >= 0) return 1;
+        return a.localeCompare(b)
+    }).concat(nr)
+}
+
+function chartControlState() {
+    const s = document.getElementById('stackBy');
+    const m = document.getElementById('plotMode');
+    return { stackCol: s ? s.value : STACK_DEFAULT, mode: m && m.value === 'percent' ? 'percent' : 'count' }
+}
+
+function initChartControls() {
+    const sel = document.getElementById('stackBy');
+    if (!sel || sel.options.length) return;
+    const add = (value, text) => { const o = document.createElement('option'); o.value = value; o.textContent = text; sel.appendChild(o) };
+    add('', 'None (one colour)');
+    add(STACK_DEFAULT, 'Participant groups');
+    codedColumns().filter(c => c !== STACK_DEFAULT && csvData.some(r => String(r[c] ?? '').trim()))
+        .forEach(c => add(c, shortLabel(c)));
+    sel.value = STACK_DEFAULT;
+    const redraw = () => { viewsDirty.plot = !0; renderVisibleViews() };
+    sel.addEventListener('change', redraw);
+    document.getElementById('plotMode').addEventListener('change', redraw)
+}
 
 function Drawplot(PlotFilter) {
     if (!PlotFilter) return;
@@ -792,45 +863,55 @@ function Drawplot(PlotFilter) {
     const errorEl = document.querySelector(".plot-error");
     errorEl.innerHTML = "";
     plotEl.style.display = "block";
-    const STACK_CATEGORIES = ["People with disabilities", "Older adults", "Caregivers", "Specialists (e.g., therapists, teachers)", "People without disabilities", "No user involvement", "Other"];
+    const dark = document.documentElement.getAttribute('data-theme') === 'dark';
     const ds = {
         bgPanel: getDSVar('--ds-bg-panel'),
         textPrimary: getDSVar('--ds-text-primary'),
         textSecondary: getDSVar('--ds-text-secondary'),
-        borderSubtle: getDSVar('--ds-border-subtle'),
-        // Viridis (perceptually uniform, colour-blind safe), 7 colours for 7 series
-        palette: chartPalette()
+        borderSubtle: getDSVar('--ds-border-subtle')
     };
+    const { stackCol: chosenStack, mode } = chartControlState();
+    // Colouring a column by itself adds nothing; treat it as "none".
+    const stackCol = chosenStack && chosenStack !== PlotFilter ? chosenStack : '';
+    const total = filteredDataTmp.length;
+
     const stackMap = {};
-    const studyCount = {}; // distinct studies per bar (segments can double-count, see subtitle)
-    const groupKey = {};
-    STACK_CATEGORIES.forEach(c => groupKey[canon(c)] = c);
+    const studyCount = {}; // distinct studies per bar
+    const segSeen = new Set();
     filteredDataTmp.forEach(study => {
-        // Multi-select answers ("Interview; Survey") count toward each answer's bar
-        // instead of creating one bar per unique combination (73 bars for Study Method).
-        const xVals = [...new Set(splitValues(study[PlotFilter]).map(v => v.replace(/\s*\((?:i\.e\.|e\.g\.)[^)]*\)\s*$/, '')))];
-        const groups = [...new Set(splitValues(study["Participant Groups"]).map(g => groupKey[canon(g)] || "Other"))];
+        // Multi-answer cells ("Interview; Survey") count toward each answer's bar.
+        const xVals = [...new Set(splitValues(study[PlotFilter]).map(displayLabel))];
+        let segs = ['Studies'];
+        if (stackCol) {
+            segs = [...new Set(splitValues(study[stackCol]).map(displayLabel))];
+            if (!segs.length) segs = [NOT_RECORDED];
+        }
         xVals.forEach(xVal => {
-            if (!stackMap[xVal]) {
-                stackMap[xVal] = {};
-                STACK_CATEGORIES.forEach(c => stackMap[xVal][c] = 0);
-                studyCount[xVal] = 0
-            }
+            if (!stackMap[xVal]) { stackMap[xVal] = {}; studyCount[xVal] = 0 }
             studyCount[xVal]++;
-            groups.forEach(g => stackMap[xVal][g]++)
+            segs.forEach(g => { segSeen.add(g); stackMap[xVal][g] = (stackMap[xVal][g] || 0) + 1 })
         })
     });
-    const keys = Object.keys(stackMap);
-    const allNumeric = keys.length && keys.every(k => k !== '' && !isNaN(Number(k)));
-    const categories = allNumeric ? keys.sort((a, b) => Number(a) - Number(b)) : keys.sort((a, b) => a.localeCompare(b));
+    const categories = orderValues(PlotFilter, Object.keys(stackMap));
     const studyTotals = categories.map(c => studyCount[c]);
-    const series = STACK_CATEGORIES.map((c, index) => {
-        return {
-            name: c,
-            data: categories.map(l => stackMap[l][c] || 0),
-            color: ds.palette[index % ds.palette.length]
-        }
-    }).filter(s => s.data.some(v => v > 0));
+    const segNames = stackCol ? orderValues(stackCol, [...segSeen]) : ['Studies'];
+    const nColours = segNames.filter(s => s !== NOT_RECORDED).length;
+    const palette = chartPalette(Math.max(nColours, 1));
+    const grey = dark ? '#9ca3af' : '#6b7280';
+    let ci = 0;
+    const series = segNames.map(name => ({
+        id: name,
+        name,
+        color: name === NOT_RECORDED ? grey : palette[ci++ % palette.length],
+        data: categories.map(c => {
+            const count = stackMap[c][name] || 0;
+            // Percent + no colouring: bar height = % of all filtered studies.
+            return (!stackCol && mode === 'percent')
+                ? { y: total ? Math.round(1000 * count / total) / 10 : 0, count }
+                : { y: count, count }
+        })
+    })).filter(s => s.data.some(p => p.count > 0));
+
     updateAccessibleTable(categories, series, PlotFilter, studyTotals);
     if (series.length === 0) {
         plotEl.style.display = "none";
@@ -838,13 +919,27 @@ function Drawplot(PlotFilter) {
         return
     }
     plotState.totals = studyTotals;
-    plotState.xLabel = PlotFilter === 'Year' ? 'Year' : PlotFilter.replace(/\s*\(.*\)\s*:?$/, '');
-    series.forEach(s => s.id = s.name);
-    // Re-use the existing chart: rebuilding it on every filter click took
-    // 0.4–0.85 s and leaked one Highcharts instance per click.
-    if (plotState.chart && plotState.chart.series) {
+    plotState.xLabel = shortLabel(PlotFilter);
+    plotState.mode = mode;
+    plotState.stacked = !!stackCol;
+    plotState.stackLabel = stackCol ? shortLabel(stackCol) : '';
+    const title = `Studies by ${escapeHtml(plotState.xLabel)}`;
+    const subtitle = stackCol
+        ? (mode === 'percent'
+            ? `Each bar = 100% of its studies' answers, split by ${escapeHtml(plotState.stackLabel)}. n under each bar = distinct studies.`
+            : `Numbers above bars = distinct studies. Colours = ${escapeHtml(plotState.stackLabel)}; a study with several answers appears in several colours.`)
+        : (mode === 'percent'
+            ? 'Bar height = % of the filtered studies that have this answer (studies with several answers count toward each).'
+            : 'Number of studies with each answer (studies with several answers count toward each).');
+
+    // Data-only changes (filters) do a light update; a change of colouring,
+    // mode or theme applies the full options to the SAME chart (destroying and
+    // re-creating it raced Highcharts' sonification audio: "AudioContext closed").
+    const configKey = [stackCol, mode, dark].join('|');
+    if (plotState.chart && plotState.chart.series && plotState.configKey === configKey) {
         plotState.chart.update({
-            title: { text: `Studies by ${escapeHtml(PlotFilter)}` },
+            title: { text: title },
+            subtitle: { text: subtitle },
             xAxis: { categories: categories },
             series: series
         }, !1, !0);
@@ -852,8 +947,8 @@ function Drawplot(PlotFilter) {
         plotState.chart.redraw({ duration: 200 });
         return
     }
-    plotState.chart = Highcharts.chart('plotIt', {
-        colors: ds.palette,
+    const opts = {
+        colors: palette,
         chart: {
             type: 'column',
             backgroundColor: ds.bgPanel,
@@ -877,6 +972,12 @@ function Drawplot(PlotFilter) {
             tickColor: "#33415574",
             tickWidth: 1,
             labels: {
+                // In percentage-stacked view every bar is 100% tall, so the study
+                // count goes under the bar label instead of on top of the bar.
+                formatter: function () {
+                    if (plotState.mode === 'percent' && plotState.stacked) return `${escapeHtml(String(this.value))}<br/>n=${plotState.totals[this.pos]}`;
+                    return escapeHtml(String(this.value))
+                },
                 style: {
                     color: ds.textSecondary
                 },
@@ -885,7 +986,7 @@ function Drawplot(PlotFilter) {
             }
         },
         title: {
-            text: `Studies by ${escapeHtml(PlotFilter)}`,
+            text: title,
             align: 'left',
             style: {
                 color: ds.textPrimary,
@@ -893,7 +994,7 @@ function Drawplot(PlotFilter) {
             }
         },
         subtitle: {
-            text: 'Numbers above bars = distinct studies. Colours = participant groups; a study with several groups appears in several colours, and multi-answer studies count toward each answer.',
+            text: subtitle,
             align: 'left',
             style: {
                 color: ds.textSecondary,
@@ -936,30 +1037,38 @@ function Drawplot(PlotFilter) {
             },
             point: {
                 descriptionFormatter: function (point) {
-                    return `${plotState.xLabel} ${point.category}: ${point.series.name}, ${point.y} studies. ${plotState.totals[point.index]} distinct studies in this bar.`
+                    const n = point.options.count ?? point.y;
+                    const pct = plotState.mode === 'percent'
+                        ? (plotState.stacked ? `, ${Math.round(point.percentage || 0)}% of this bar` : `, ${point.y}% of filtered studies`)
+                        : '';
+                    const seg = plotState.stacked ? `${point.series.name}: ` : '';
+                    return `${plotState.xLabel} ${point.category}: ${seg}${n} studies${pct}. ${plotState.totals[point.index]} distinct studies in this bar.`
                 }
             }
         },
         yAxis: {
             min: 0,
+            max: mode === 'percent' ? 100 : null,
             gridLineColor: ds.borderSubtle,
             title: {
-                text: 'No. of studies',
+                text: mode === 'percent' ? (stackCol ? '% of answers in the bar' : '% of filtered studies') : 'No. of studies',
                 style: {
                     color: ds.textSecondary
                 }
             },
             labels: {
+                format: mode === 'percent' ? '{value}%' : '{value}',
                 style: {
                     color: ds.textSecondary
                 }
             },
             stackLabels: {
-                enabled: !0,
-                // Show distinct studies, not the segment sum (which double-counts
-                // studies with several participant groups).
+                enabled: !(stackCol && mode === 'percent'),
+                // Distinct studies, not the segment sum (a study with several
+                // answers would otherwise be counted more than once).
                 formatter: function () {
-                    return plotState.totals[this.x]
+                    const n = plotState.totals[this.x];
+                    return plotState.mode === 'percent' ? `n=${n}` : n
                 },
                 style: {
                     fontWeight: 'bold',
@@ -969,8 +1078,13 @@ function Drawplot(PlotFilter) {
             }
         },
         legend: {
+            enabled: !!stackCol,
             align: 'left',
             verticalAlign: 'top',
+            title: {
+                text: stackCol ? `Colour: ${escapeHtml(plotState.stackLabel)}` : '',
+                style: { color: ds.textPrimary, fontWeight: '600', fontSize: '13px' }
+            },
             // Bigger legend entries with spacing: these are toggle buttons, so
             // they need comfortable targets (WCAG 2.5.8, 24px minimum).
             itemStyle: {
@@ -983,19 +1097,13 @@ function Drawplot(PlotFilter) {
             itemMarginTop: 5,
             itemMarginBottom: 5,
             itemDistance: 24,
-            itemHoverStyle: {
-                color: ds.accent
-            },
-            itemHiddenStyle: {
-                color: ds.textDisabled
-            },
             keyboardNavigation: {
                 enabled: !0
             }
         },
         plotOptions: {
             column: {
-                stacking: 'normal',
+                stacking: (stackCol && mode === 'percent') ? 'percent' : 'normal',
                 borderWidth: 1,
                 borderColor: ds.bgPanel,
                 borderRadius: 2,
@@ -1003,26 +1111,40 @@ function Drawplot(PlotFilter) {
                 point: {
                     events: {
                         click: function () {
-                            // Ensure the sonification module is loaded and ready
-                            if (this.sonify) {
-                                this.sonify();
-                            }
+                            if (this.sonify) this.sonify()
                         }
                     }
                 }
-            },
+            }
         },
         tooltip: {
-            enabled: !0, shared: true,
+            enabled: !0,
+            shared: !0,
             backgroundColor: ds.bgPanel,
             style: {
                 color: ds.textPrimary
             },
-            // headerFormat: '<b>{point.x}</b><br/>',
-            // pointFormat: '{series.name}: {point.y}<br/>Total: {point.stackTotal}'
+            formatter: function () {
+                const pts = this.points || [this];
+                const first = pts[0];
+                const idx = first.point.index;
+                let html = `<b>${escapeHtml(String(first.key ?? first.point.category))}</b> — ${plotState.totals[idx]} studies<br/>`;
+                pts.forEach(p => {
+                    const n = p.point.options.count ?? p.y;
+                    const pct = plotState.mode === 'percent'
+                        ? (plotState.stacked ? ` (${Math.round(p.percentage || 0)}%)` : ` (${p.y}% of filtered)`)
+                        : '';
+                    const name = plotState.stacked ? escapeHtml(p.series.name) : 'Studies';
+                    html += `<span style="color:${p.color}">●</span> ${name}: <b>${n}</b>${pct}<br/>`
+                });
+                return html
+            }
         },
         series: series
-    })
+    };
+    plotState.configKey = configKey;
+    if (plotState.chart && plotState.chart.series) plotState.chart.update(opts, !0, !0);
+    else plotState.chart = Highcharts.chart('plotIt', opts)
 }
 
 function updateAccessibleTable(finalUniqueX, highchartsSeries, PlotFilter, studyTotals = []) {
@@ -1048,7 +1170,8 @@ function updateAccessibleTable(finalUniqueX, highchartsSeries, PlotFilter, study
     // A plain, semantic data table: screen readers navigate it cell by cell with
     // row/column headers. (Rows used to carry an aria-label that replaced the
     // real cells, and the table was role="grid" without grid keyboard support.)
-    const valueOf = (point) => (point && typeof point === 'object') ? point.y : point || 0;
+    // Always the number of studies (also in percentage view, where y is a %).
+    const valueOf = (point) => (point && typeof point === 'object') ? (point.count ?? point.y) : point || 0;
     tableBody.innerHTML = finalUniqueX.map((label, index) => {
         const vals = highchartsSeries.map(series => valueOf(series.data[index]));
         const distinct = studyTotals[index] ?? vals.reduce((a, b) => a + b, 0);
@@ -1402,9 +1525,11 @@ function viridisRgb(t) {
 // Categorical chart colours sampled from viridis, as in R's viridis(7).
 // Dark theme uses viridis(7, begin = 0.25) so the darkest purple doesn't vanish
 // into the dark background.
-function chartPalette() {
+function chartPalette(n = 7) {
     const dark = document.documentElement.getAttribute('data-theme') === 'dark';
-    const begin = dark ? 0.25 : 0, end = 1, n = 7;
+    const begin = dark ? 0.25 : 0, end = 1;
+    // One series: a single mid-viridis colour. Otherwise n evenly spaced stops.
+    if (n <= 1) return ['#' + viridisRgb(dark ? 0.6 : 0.4).map(c => c.toString(16).padStart(2, '0')).join('')];
     return Array.from({ length: n }, (_, i) => {
         const rgb = viridisRgb(begin + (end - begin) * i / (n - 1));
         return '#' + rgb.map(c => c.toString(16).padStart(2, '0')).join('')
@@ -1546,6 +1671,9 @@ function exportFilteredData() {
     const removedColsVal = $('#removeColumns').dropdown('get value');
 
     if (removedColsVal) settings.removeColumns = removedColsVal;
+    const cc = chartControlState();
+    settings.chartColourBy = cc.stackCol || "none";
+    settings.chartShow = cc.mode;
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(filteredDataTmp), "Filtered Data");
     const filterRows = [
@@ -1583,6 +1711,13 @@ function handleDataImport(e) {
         if (imported.plotFilter) {
             $('#plotFilter').dropdown('set selected', imported.plotFilter)
         }
+        if (imported.chartColourBy) {
+            const sel = document.getElementById("stackBy");
+            const v = imported.chartColourBy === "none" ? "" : String(imported.chartColourBy);
+            if ([...sel.options].some(o => o.value === v)) sel.value = v
+        }
+        if (imported.chartShow) document.getElementById("plotMode").value = imported.chartShow === "percent" ? "percent" : "count";
+        viewsDirty.plot = !0;
         if (imported.removeColumns) {
             $('#removeColumns').dropdown('set exactly', imported.removeColumns.split(','))
         }
@@ -1827,6 +1962,7 @@ function doInitialization() {
     fixDropdownAccessibility($(".secondDropdown"), "Filter by study characteristics");
     fixDropdownAccessibility($(".thirdDropdown"), "Filter by participants");
     document.querySelector(".totalRecords").innerHTML = csvData.length;
+    initChartControls();
     renderTable(csvData);
     updateFilterCounts(csvData, {});
     setTimeout(getPlot, 100);

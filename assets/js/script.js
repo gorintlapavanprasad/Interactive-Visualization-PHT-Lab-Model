@@ -425,23 +425,19 @@ csvData.forEach((row, i) => {
 buildSearchIndex(csvData);
 var currentSearch = null; // parsed query while a search is active (for ranking + highlighting)
 var filteredDataTmp = [];
-var GLOBAL_HASH_MAP = {};
 var allFilters = {};
 var currentTheme = "light";
-var categoryWiseTemp = {};
 var resizeTimeout;
 var currentTourInstance = null;
 var isRowDropdownInitialized = !1;
 var isPlotDropdownInitialized = !1;
 var columnIdMap = {};
-var columnNameMap = {};
 
 function initializeColumnDropdown(headerKeys) {
     if (isRowDropdownInitialized) return;
     const dynamicValues = headerKeys.filter(k => k && !["DOI", "Study ID", "Title", "Lead author contact details"].includes(k)).map((name, index) => {
         const id = `col_${index}`;
         columnIdMap[id] = name;
-        columnNameMap[name] = id;
         return {
             name: name,
             value: id
@@ -488,15 +484,6 @@ function initializeColumnDropdown(headerKeys) {
     });
     isRowDropdownInitialized = !0;
     fixDropdownAccessibility($("#removeColumns"), "Hide fields in the study cards")
-}
-
-function generateHashID(str) {
-    if (!str) return "null";
-    let hash = 5381;
-    for (let i = 0; i < str.length; i++) {
-        hash = ((hash << 5) + hash) + str.charCodeAt(i)
-    }
-    return (hash >>> 0).toString(16)
 }
 
 function buildLookupCache() {
@@ -609,7 +596,6 @@ function applyFilters(args) {
         allFilters = {};
         filteredDataTmp = csvData;
         currentSearch = null;
-        categoryWiseTemp = {};
         applyColumnFilter([]);
         renderTable(filteredDataTmp);
         updateFilterCounts(csvData, {});
@@ -1014,15 +1000,6 @@ function Drawplot(PlotFilter) {
                 borderColor: ds.bgPanel,
                 borderRadius: 2,
                 cursor: 'pointer',
-                // point: {
-                //     events: {
-                //         mouseOver: function () {
-                //             if (this.sonify) {
-                //                 this.sonify()
-                //             }
-                //         }
-                //     }
-                // }
                 point: {
                     events: {
                         click: function () {
@@ -1551,7 +1528,6 @@ function changeSpectrumIntensity() {
     displaySpectrum()
 }
 
-
 // Includes NotesFilter, which export/import previously dropped.
 const TEXT_FILTER_IDS = ["globalSearch", "YearFilter", "PagesFilter", "DOIFilter", "titleFilter", "authorFilter", "NotesFilter"];
 
@@ -1873,22 +1849,6 @@ document.addEventListener("DOMContentLoaded", () => {
         })
     }
     $('.infoIcon.standalone').popup();
-    $('.ui.accordion .title').on('keydown', function (e) {
-        if (e.which === 13 || e.which === 32) {
-            e.preventDefault();
-            $(this).click();
-            const isOpen = $(this).hasClass('active');
-            $(this).attr('aria-expanded', !isOpen)
-        }
-    });
-    $('.ui.accordion').accordion({
-        onClose: function () {
-            $(this).find('input').attr('tabindex', '-1')
-        },
-        onOpen: function () {
-            $(this).find('input').attr('tabindex', '0')
-        }
-    });
     const tabNames = {
         "Show-plot": "Plot",
         "Show-data": "Data",
@@ -1937,8 +1897,6 @@ document.addEventListener("DOMContentLoaded", () => {
         // Resize only needs a reflow, not a full rebuild of the chart.
         resizeTimeout = setTimeout(() => plotState.chart && plotState.chart.reflow(), 100)
     });
-    const tabEl = document.querySelector('button[data-bs-toggle="tab"][data-bs-target="#Show-plot-pane"]');
-    if (tabEl) tabEl.addEventListener('shown.bs.tab', () => Drawplot($plotFilter.dropdown('get value')));
     $('#restartTourButton').on('click keydown', function (e) {
         if (e.type === 'keydown') {
             if (e.key === 'Enter' || e.key === ' ') {
@@ -1967,28 +1925,6 @@ document.addEventListener("DOMContentLoaded", () => {
         })
     })
 });
-
-function handleTourNav(selector, dir) {
-    if (selector) $(selector).trigger('click');
-    $('.ui.modal').modal('hide');
-    if (currentTourInstance) dir === 'next' ? currentTourInstance.next() : currentTourInstance.back();
-}
-
-function clickButtonAndAdvance(element) {
-    if (element && $(element).length > 0) {
-        $(element).trigger('click')
-    }
-    $('.ui.modal').modal('hide');
-    if (currentTourInstance) currentTourInstance.next();
-}
-
-function clickButtonAndFallback(element) {
-    if (element && $(element).length > 0) {
-        $(element).trigger('click')
-    }
-    $('.ui.modal').modal('hide');
-    if (currentTourInstance) currentTourInstance.back();
-}
 
 function startGuidedTour() {
     if (currentTourInstance && currentTourInstance.isActive()) return;
@@ -2155,25 +2091,3 @@ $('.ui.dropdown .menu').each(function () {
         }
     })
 });
-$('#import-data-button').on('keydown', function (e) {
-    if (e.which === 13 || e.which === 32) {
-        $('#import-file-input').trigger('click')
-    }
-});
-const unlockAudio = () => {
-    if (window.hoverSound && hoverSound.context && hoverSound.context.state === 'suspended') {
-        hoverSound.context.resume().then(() => {
-            document.removeEventListener('click', unlockAudio);
-            document.removeEventListener('keydown', unlockAudio)
-        })
-    }
-};
-var lastFocusedOption = null;
-document.addEventListener('focusin', () => {
-    const activeEl = document.activeElement;
-    if (activeEl.classList.contains('mbsc-scroller-wheel-item')) {
-        lastFocusedOption = activeEl
-    }
-});
-document.addEventListener('click', unlockAudio);
-document.addEventListener('keydown', unlockAudio)

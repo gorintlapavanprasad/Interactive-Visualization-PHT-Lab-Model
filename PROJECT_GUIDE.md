@@ -162,16 +162,18 @@ cross-checked independently against the raw data.
 9. Accessibility: axe now reports 0 WCAG 2.2 AA violations (section 8). Still open: manual testing
    with real NVDA, JAWS and VoiceOver users, a shorter tour, and Highcharts legend buttons that are
    17 px tall (they pass the spacing exception, but 24 px+ would be better).
-10. **Code health:** one global 1.7k-line script, duplicated grid markup, jQuery 3.1.1 (2016, has
-    known CVEs), no linter, no automated UI tests.
-11. **Licensing to confirm:** Highcharts is free for non-commercial/academic use only. The DataSpectra
-    repo contains a published paper PDF and Mobiscroll trial files that probably shouldn't be
-    redistributed.
+10. **Code health:** one global ~2k-line script, duplicated grid markup, jQuery 3.1.1 (2016, has
+    known security advisories), no linter. (Automated tests now exist; section 13.)
+11. **Licensing to confirm:** Highcharts needs a paid licence unless the use is non-commercial
+    (Highsoft's terms cover personal, school and non-profit use). Check with Highsoft or your
+    university that this project qualifies. The project itself has no LICENSE file yet (the owner
+    decides). The old DataSpectra repo still contains a published paper PDF and Mobiscroll trial
+    files that probably shouldn't be redistributed.
 12. ~~AudioContext console error on load~~ (no longer occurs).
-13. **The live site is out of date.** https://gorintlapavanprasad.github.io/Interactive-Visualization-PHT-Lab-Model/
-    is byte-for-byte the *original* code, so every bug in section 5 is live. The older
-    https://phtvisialization.github.io/phtvisialization/ link is dead (404). That account was renamed
-    to PhtDataVisualization, and its site is an even older Chart.js prototype from April 2025.
+13. ~~Live site out of date~~ (fixed: https://gorintlapavanprasad.github.io/Interactive-Visualization-PHT-Lab-Model/
+    runs the current code). The older https://phtvisialization.github.io/phtvisialization/ link is
+    dead (404). That account was renamed to PhtDataVisualization, and its site is an old Chart.js
+    prototype from April 2025, so don't share that link.
 
 ## 7. Roadmap and development tasks
 
@@ -180,7 +182,7 @@ infrastructure, **P3** = nice to have.
 
 | ID | Pri | Task | Done when |
 |---|---|---|---|
-| T1 | P0 | Push these fixes to the real GitHub repo (needs repo access) as a reviewed PR | PR merged |
+| T1 | P0 | ✅ **Done.** Fixes pushed to `main` and live | Live |
 | T2 | P0 | ✅ **Done.** `tools/build-data.js` (section 10) | One command regenerates `data.js`; audit passes |
 | T3 | P0 | Partly done: the pipeline now fixes answer spellings, DOIs and duplicate IDs automatically. Remaining: fix the column-name typos in the Covidence template (`Casegivers`, `Motor of physical impairment`, `Brainstormming`, `Convienience`) | Template typos gone |
 | T4 | P1 | ✅ **Done** (section 11): live counts beside every filter option; zero-result options greyed out | Counts update with filters |
@@ -190,10 +192,10 @@ infrastructure, **P3** = nice to have.
 | T8 | P1 | Cross-tab heatmap: any two dimensions (e.g. Community × Study Method) to show research gaps | — |
 | T9 | P2 | ✅ **Done** (section 12): no requests to other servers | Works with network off |
 | T10 | P2 | ✅ Automated part done (0 axe violations; reflow at 400% zoom; see section 8). Remaining: sessions with real screen-reader users, shorter tour | Signed off by disabled testers |
-| T11 | P2 | ✅ **Done** (section 13): GitHub Actions runs the data audit and 44 browser checks on every push and pull request | CI green on every push |
+| T11 | P2 | ✅ **Done** (section 13): GitHub Actions runs the data audit and 45 browser checks on every push and pull request | CI green on every push |
 | T12 | P2 | Code health: split `script.js` into modules, ESLint, upgrade jQuery, generate grid rows from config | — |
-| T13 | P2 | Repo hygiene: archive the DataSpectra prototypes, remove the PDF and Mobiscroll trial, add LICENSE and README, confirm the Highcharts licence | — |
-| T14 | P2 | Deploy to GitHub Pages | Public URL |
+| T13 | P2 | ✅ Mostly done (section 14): unused files and dead code removed, README added. Remaining (owner's decisions): choose a project LICENSE, confirm the Highcharts licence, archive the old DataSpectra repo | — |
+| T14 | P2 | ✅ **Done.** Live on GitHub Pages | Public URL |
 | T15 | P3 | Shareable URL with filter state; CSV and BibTeX export of the filtered studies; "insights" summary panel | — |
 
 **Suggested order:** T1 (put the fixes live) → T2/T3 → T4 → T9 → T11 → T6–T8 → the rest.
@@ -388,10 +390,7 @@ blocked and then using filters, menus and all four tabs:
 Licences: Fomantic UI and Phosphor Icons are MIT (their licence files are kept next to the files),
 and Lato is SIL Open Font License. Highcharts needs a licence for non-academic/commercial use.
 
-Not loaded by the page but still in the repo (cleanup is task T13):
-- `assets/vendor/cdn-downloads/` (duplicate)
-- `assets/vendor/mobiscroll/` (unused trial build)
-- Plotly, Chart.js and Bootstrap in `assets/vendor/cdn-local/js/`
+The unused vendor files that used to be listed here were removed in the cleanup (section 14).
 
 ## 13. Automated tests (GitHub Actions)
 
@@ -405,7 +404,7 @@ Run the same tests on your own computer (needs Node 18+ and Google Chrome):
 cd tools && npm ci && npm test
 ```
 
-### What is checked (44 checks)
+### What is checked (45 checks)
 
 | Area | Checks |
 |---|---|
@@ -414,7 +413,7 @@ cd tools && npm ci && npm test
 | Real dropdowns | Add 2 tags, remove 1 → same as 1 tag; clearing tags shows every study |
 | Known results | 25 reference values: filter results (Interview = 92, …), search results (blind = 78, …), the top search result, every grid row and the number of empty options |
 | Logic | OR within a group never gives fewer studies; AND across groups never gives more; reset shows all |
-| Accessibility | axe-core finds 0 WCAG 2.2 AA violations on every tab; every focusable control (including the settings menu) has a name a screen reader can read; keyboard filtering works and the count is announced; at 200% zoom the filters and chart are usable with no horizontal scrolling |
+| Accessibility | axe-core finds 0 WCAG 2.2 AA violations on every tab; every focusable control (including the settings menu) has a name a screen reader can read; keyboard filtering works and the count is announced; at 200% zoom the filters, the chart and its data table are usable with no horizontal scrolling |
 | Offline | No requests to outside servers; no missing files; fonts and icons load |
 | Speed and size | Page under 5,000 elements; a filter change on the chart tab under 1.5 s |
 
@@ -447,3 +446,39 @@ changes would stop a broken version from going live:
    pull request can be merged. Then make changes on a branch and merge them through a PR.
 2. Or switch **Settings → Pages → Source** to "GitHub Actions" and add a deploy job that runs only
    after Tests pass.
+
+## 14. Repository cleanup (2026-11-09)
+
+Removed 27 files (7.9 MB) that the site never loaded:
+- Plotly (3.5 MB), Chart.js and Bootstrap
+- the Mobiscroll trial build (licence-restricted)
+- a duplicate copy of the Fomantic CSS and Lato fonts (`cdn-downloads/`)
+- an unused stray `style.css`
+- the Inter font
+- `pagination.css`
+- three old images
+
+Also removed:
+- commented-out HTML (CDN script tags, old logo, old buttons)
+- dead JavaScript: an unused hash helper and globals, accordion and Bootstrap handlers for elements
+  that don't exist, three unused tour helpers, and an audio-unlock and Mobiscroll focus tracker for
+  objects that were never created
+
+Bugs found during the cleanup:
+- **Leftover CSS from the old "desktop only" screen hid the chart's data table below 1024 px**,
+  which includes 200% zoom. That table is the chart's text alternative. It's fixed, and CI now checks
+  that the table is shown at 200% zoom; the check fails on the old CSS.
+- The Import button opened the file picker from both its keyboard and click handlers, so Enter could
+  open it twice. The extra handler is removed (a `<button>` already handles Enter and Space).
+
+Added:
+- `README.md`: what the site is, the live link, a tests badge, how to run and update it, and the
+  third-party licences.
+- A clearer page description for search engines and link previews.
+
+Now every file in the repo is used by the site, the tools or the docs. The remaining 45 checks all pass.
+
+**Still for the owner to decide:**
+- A **LICENSE** for the project's own code and data (e.g. MIT for code, CC BY 4.0 for data).
+- Whether the **Highcharts** use is covered by its non-commercial terms.
+- Whether to **archive** the old `dua-fs/DataSpectra` repository and the PhtDataVisualization site.

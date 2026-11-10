@@ -291,6 +291,16 @@ async function collectGolden(page) {
     });
     check('200% zoom (720px): filters and chart usable, no horizontal scroll', z.filters && z.chart && !z.hScroll, JSON.stringify(z));
     if (!(z.filters && z.chart && !z.hScroll)) await zoom.screenshot({ path: path.join(ART, 'zoom200.png') });
+    // The chart's data table is the text alternative for the chart; it must
+    // stay available when zoomed (an old rule hid it below 1024px).
+    await zoom.evaluate(() => $('#show-plot-pane .menu .item[data-tab="Show-plot/table"]').trigger('click'));
+    await sleep(300);
+    const zt = await zoom.evaluate(() => {
+      const c = document.getElementById('plotDataTableContainer');
+      const r = c.getBoundingClientRect();
+      return { visible: getComputedStyle(c).display !== 'none' && r.height > 0, rows: document.querySelectorAll('#sr-table-body tr').length };
+    });
+    check('200% zoom: the chart data table (text alternative) is shown', zt.visible && zt.rows > 0, JSON.stringify(zt));
     await zoom.close();
 
     // ----------------------------------------------------------- offline ----

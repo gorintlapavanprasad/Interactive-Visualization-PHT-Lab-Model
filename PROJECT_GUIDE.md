@@ -203,7 +203,7 @@ infrastructure, **P3** = nice to have.
 | T8 | P1 | ✅ **Done** (section 17): Gaps tab, a heatmap of any two dimensions with gaps highlighted | — |
 | T9 | P2 | ✅ **Done** (section 12): no requests to other servers | Works with network off |
 | T10 | P2 | ✅ Automated part done (0 axe violations; reflow at 400% zoom; see section 8). Tour updated to cover the new features (section 22). Remaining: sessions with real screen-reader users | Signed off by disabled testers |
-| T11 | P2 | ✅ **Done** (section 13): GitHub Actions runs lint, the data audit, 102 unit tests and 143 browser checks on every push and pull request (sections 19–24) | CI green on every push |
+| T11 | P2 | ✅ **Done** (section 13): GitHub Actions runs lint, the data audit, 102 unit tests and 148 browser checks on every push and pull request (sections 19–24) | CI green on every push |
 | T12 | P2 | ✅ **Done** (section 18): 10 focused script files, ESLint in CI, jQuery 3.7.1, grids from config | — |
 | T13 | P2 | ✅ Mostly done (section 14): unused files and dead code removed, README added. Remaining (owner's decisions): choose a project LICENSE, confirm the Highcharts licence, archive the old DataSpectra repo | — |
 | T14 | P2 | ✅ **Done.** Live on GitHub Pages | Public URL |
@@ -897,3 +897,24 @@ Fixes:
 - **Targets of at least 24 px:** the patterns, "hide N/A" and column-chooser checkboxes, the intensity
   sliders, the DOI links on cards, the title buttons in the table, and the chart's "play as sound" /
   "data table" buttons.
+
+### #21: Voice-control and switch user
+
+5 new checks:
+- Chrome's computed name of every control includes its visible label (2.5.3); about 280 controls on
+  5 views.
+- Sidebar menus are named after their headings.
+- No single-key shortcuts (2.1.4).
+- The gear menu opens on click and closes with Escape.
+- The card field hider has a visible label.
+
+Fixes:
+- **Sidebar menus:** their names were "Filter by study characteristics" while the heading reads
+  "Characteristics of Included Studies", so saying "click Characteristics" did nothing. Names now start
+  with the heading.
+- **Gear menu:** it opened only on hover or focus. It now also opens on click, and Escape closes it and
+  returns focus to the gear (1.4.13). `aria-expanded` follows.
+- **Data tab field hider:** it now has a visible "Hide fields" label, and the placeholder "choose filters
+  or search..." is now "choose fields to hide…".
+
+Switch users also benefit from #20 (one Tab stop per grid).

@@ -3903,3 +3903,20 @@ ul li {
     color: var(--ds-text-secondary);
     margin: 0 0 8px
 }
+
+/* Gear menu dismissed with Escape or a second click (#21) */
+.hover-nav-container.dismissed .hover-nav-menu {
+    display: none !important
+}
+
+/* Data tab field hider: visible "Hide fields" label beside the menu (#21) */
+.plotFilterMultiSelect {
+    display: flex;
+    align-items: center;
+    gap: 8px
+}
+
+.plotFilterMultiSelect>#removeColumns {
+    flex: 1 1 auto;
+    min-width: 0
+}

@@ -112,16 +112,26 @@ function fixDropdownAccessibility($dropdown, customLabel) {
 function doInitialization() {
     const trigger = document.querySelector('.hover-nav-trigger');
     const container = document.querySelector('.hover-nav-container');
-    const openMenu = () => trigger.setAttribute('aria-expanded', 'true');
+    // Opens on hover, focus or click; Escape closes it and returns focus to the
+    // gear (voice / switch / keyboard users, #21).
+    const openMenu = () => { container.classList.remove('dismissed'); trigger.setAttribute('aria-expanded', 'true') };
     const closeMenu = () => trigger.setAttribute('aria-expanded', 'false');
     container.addEventListener('mouseenter', openMenu);
-    container.addEventListener('mouseleave', closeMenu);
-    trigger.addEventListener('focus', openMenu);
+    container.addEventListener('mouseleave', () => { container.classList.remove('dismissed'); closeMenu() });
+    trigger.addEventListener('focus', () => { if (!container.classList.contains('dismissed')) openMenu() });
+    trigger.addEventListener('click', openMenu);
+    container.addEventListener('keydown', e => {
+        if (e.key !== 'Escape') return;
+        container.classList.add('dismissed');
+        closeMenu();
+        trigger.focus()
+    });
 
     document.getElementById('type1Intensity').value = 20;
     document.getElementById('type2Intensity').value = 20;
     container.addEventListener('focusout', (e) => {
         if (!container.contains(e.relatedTarget)) {
+            container.classList.remove('dismissed');
             closeMenu()
         }
     });
@@ -193,9 +203,9 @@ function doInitialization() {
     $('.firstDropdown').dropdown(dropdownOptions("first"));
     $('.secondDropdown').dropdown(dropdownOptions("second"));
     $('.thirdDropdown').dropdown(dropdownOptions("third"));
-    fixDropdownAccessibility($(".firstDropdown"), "Filter by PHT Lab framework");
-    fixDropdownAccessibility($(".secondDropdown"), "Filter by study characteristics");
-    fixDropdownAccessibility($(".thirdDropdown"), "Filter by participants");
+    fixDropdownAccessibility($(".firstDropdown"), "PHT Lab Framework filters");
+    fixDropdownAccessibility($(".secondDropdown"), "Characteristics of Included Studies filters");
+    fixDropdownAccessibility($(".thirdDropdown"), "Participants filters");
     document.querySelector(".totalRecords").innerHTML = csvData.length;
     initChartControls();
     initDataToolbar();

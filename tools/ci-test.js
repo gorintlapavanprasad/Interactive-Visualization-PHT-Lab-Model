@@ -1140,6 +1140,73 @@ async function collectGolden(page) {
       await p.close();
     }
 
+    // ------------------------------ persona: voice-control / switch user (#21) ----
+    console.log('\npersona: voice-control / switch user (#21)');
+    {
+      const p = await browser.newPage();
+      await p.setViewport({ width: 1440, height: 900 });
+      await p.evaluateOnNewDocument(() => localStorage.setItem('pht_lab_tour_seen', 'true'));
+      await p.goto(base, { waitUntil: 'networkidle0' });
+      await p.waitForFunction(() => window.plotState && plotState.chart);
+      // visible label is part of the accessible name (2.5.3), using Chrome's computed names
+      const squash = t => String(t || '').toLowerCase().replace(/[^a-z0-9%]+/g, '');
+      const mismatch = []; let checked = 0;
+      for (const [tab, dv] of [['Show-plot'], ['Show-data', 'cards'], ['Show-data', 'table'], ['Show-grid'], ['Show-gaps']]) {
+        await p.evaluate(async (tab, dv) => { $(`#myTab .item[data-tab="${tab}"]`).trigger('click'); await new Promise(r => setTimeout(r, 400)); if (dv) { document.querySelector(`.view-toggle [data-view="${dv}"]`).click(); await new Promise(r => setTimeout(r, 300)) } }, tab, dv);
+        const handles = await p.$$('a[href], button, input:not([type=hidden]), select, [role=button], [role=tab], summary');
+        for (const h of handles) {
+          const vis = await h.evaluate(e => {
+            const r = e.getBoundingClientRect(); if (!r.width || !r.height || e.closest('.sr-only,[inert],.highcharts-container')) return null;
+            if (e.tagName === 'SELECT' || (e.tagName === 'INPUT' && e.type !== 'button')) {
+              if (e.labels && e.labels[0]) return e.labels[0].innerText;
+              const dd = e.closest('.ui.dropdown'); const lab = dd && dd.parentElement.querySelector('.plot-by-label');
+              return lab ? lab.textContent : '';
+            }
+            const c = e.cloneNode(true); c.querySelectorAll('.sr-only,[aria-hidden=true]').forEach(x => x.parentNode.removeChild(x));
+            return (c.textContent || '').trim();
+          });
+          if (!vis || !vis.trim()) continue;
+          const snap = await p.accessibility.snapshot({ root: h, interestingOnly: false });
+          checked++;
+          if (!squash(snap && snap.name).includes(squash(vis))) mismatch.push(`${tab}: "${vis.trim().slice(0, 25)}" -> "${String(snap && snap.name).slice(0, 40)}"`);
+        }
+      }
+      check('visible labels are part of each control\'s spoken name (2.5.3)', checked > 100 && mismatch.length === 0, `${checked} controls; ${[...new Set(mismatch)].slice(0, 4).join(' | ')}`);
+      const r = await p.evaluate(async () => {
+        const wait = ms => new Promise(res => setTimeout(res, ms));
+        const out = {};
+        // the sidebar menus are named after their visible headings
+        out.menus = [['.firstDropdown', 'PHT Lab Framework'], ['.secondDropdown', 'Characteristics of Included Studies'], ['.thirdDropdown', 'Participants']]
+          .map(([sel, head]) => (document.querySelector(sel + ' input.search')?.getAttribute('aria-label') || '').startsWith(head));
+        // no single-key shortcuts (2.1.4)
+        $('#myTab .item[data-tab="Show-plot"]').trigger('click'); await wait(300);
+        document.activeElement.blur();
+        const before = location.hash + '|' + currentTabPath() + '|' + filteredDataTmp.length;
+        for (const k of ['a', 's', 'd', 'p', 't', '1', '?', ' ']) document.body.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true }));
+        await wait(300);
+        out.noShortcuts = before === location.hash + '|' + currentTabPath() + '|' + filteredDataTmp.length;
+        // gear menu: click opens (aria-expanded), Escape closes and returns focus
+        const trig = document.querySelector('.hover-nav-trigger'), menu = document.querySelector('.hover-nav-menu');
+        trig.focus(); trig.click(); await wait(200);
+        out.open = { expanded: trig.getAttribute('aria-expanded'), shown: getComputedStyle(menu).display !== 'none' };
+        document.getElementById('restartTourButton').focus();
+        document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); await wait(200);
+        out.closed = { expanded: trig.getAttribute('aria-expanded'), shown: getComputedStyle(menu).display !== 'none', focusOnGear: document.activeElement === trig };
+        trig.blur();
+        // Data tab: the card field hider has a visible label
+        $('#myTab .item[data-tab="Show-data"]').trigger('click'); await wait(300);
+        document.querySelector('.view-toggle [data-view="cards"]').click(); await wait(300);
+        const lab = document.querySelector('.plotFilterMultiSelect .plot-by-label');
+        out.hider = !!lab && lab.getBoundingClientRect().width > 0 && /Hide fields/.test(lab.textContent) && /^Hide fields/.test(document.querySelector('#removeColumns input.search').getAttribute('aria-label'));
+        return out;
+      });
+      check('sidebar filter menus are named after their visible headings', r.menus.every(Boolean), JSON.stringify(r.menus));
+      check('no single-key shortcuts change anything (2.1.4)', r.noShortcuts);
+      check('gear menu: a click opens it (aria-expanded), Escape closes it and returns focus', r.open.expanded === 'true' && r.open.shown && r.closed.expanded === 'false' && !r.closed.shown && r.closed.focusOnGear, JSON.stringify({ open: r.open, closed: r.closed }));
+      check('the card field hider has a visible "Hide fields" label matching its name', r.hider);
+      await p.close();
+    }
+
     console.log('\naccessibility');
     const a11y = await openPage(browser, base);
     const violations = {};

@@ -958,6 +958,94 @@ async function collectGolden(page) {
       await p.close();
     }
 
+    // ------------------------------------- persona: colour-blind user (#19) ----
+    console.log('\npersona: colour-blind user (#19)');
+    {
+      const p = await browser.newPage();
+      await p.setViewport({ width: 1440, height: 900 });
+      await p.evaluateOnNewDocument(() => { localStorage.setItem('pht_lab_tour_seen', 'true'); if (!sessionStorage.getItem('patternsReset')) { localStorage.removeItem('pht_lab_patterns'); sessionStorage.setItem('patternsReset', '1') } });
+      await p.goto(base, { waitUntil: 'networkidle0' });
+      await p.waitForFunction(() => window.plotState && plotState.chart);
+      const cvd = await p.evaluate(() => {
+        // Machado et al. (2009) full-severity simulation + CIELAB distance
+        const lin = c => { c /= 255; return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4) };
+        const gam = c => { c = Math.max(0, Math.min(1, c)); return 255 * (c <= 0.0031308 ? 12.92 * c : 1.055 * Math.pow(c, 1 / 2.4) - 0.055) };
+        const M = { protan: [[0.152286, 1.052583, -0.204868], [0.114503, 0.786281, 0.099216], [-0.003882, -0.048116, 1.051998]], deutan: [[0.367322, 0.860646, -0.227968], [0.280085, 0.672501, 0.047413], [-0.011820, 0.042940, 0.968881]], tritan: [[1.255528, -0.076749, -0.178779], [-0.078411, 0.930809, 0.147602], [0.004733, 0.691367, 0.303900]] };
+        const sim = (rgb, t) => { const l = rgb.map(lin); if (t === 'achro') { const y = 0.2126 * l[0] + 0.7152 * l[1] + 0.0722 * l[2]; return [y, y, y].map(gam) } return M[t].map(r => gam(r[0] * l[0] + r[1] * l[1] + r[2] * l[2])) };
+        const lab = rgb => { const [r, g, b] = rgb.map(lin); const X = (0.4124 * r + 0.3576 * g + 0.1805 * b) / 0.95047, Y = 0.2126 * r + 0.7152 * g + 0.0722 * b, Z = (0.0193 * r + 0.1192 * g + 0.9505 * b) / 1.08883; const f = t => t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116; return [116 * f(Y) - 16, 500 * (f(X) - f(Y)), 200 * (f(Y) - f(Z))] };
+        const dE = (a, b) => { const A = lab(a), B = lab(b); return Math.hypot(A[0] - B[0], A[1] - B[1], A[2] - B[2]) };
+        const hex = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+        let worst = 1e9, where = '';
+        for (const theme of ['light', 'dark']) {
+          document.documentElement.setAttribute('data-theme', theme);
+          const pal = chartPalette(7).map(hex);
+          for (const t of ['protan', 'deutan', 'tritan', 'achro'])
+            for (let i = 0; i < pal.length; i++) for (let j = i + 1; j < pal.length; j++) {
+              const d = dE(sim(pal[i], t), sim(pal[j], t)); if (d < worst) { worst = d; where = `${theme} ${t} ${i}/${j}` }
+            }
+        }
+        document.documentElement.setAttribute('data-theme', 'light');
+        return { worst: Math.round(worst * 10) / 10, where };
+      });
+      check('7 chart colours stay distinct under protan/deutan/tritan/achromat simulation (ΔE ≥ 8)', cvd.worst >= 8, `min ΔE ${cvd.worst} (${cvd.where})`);
+      const pat = await p.evaluate(async () => {
+        const wait = ms => new Promise(r => setTimeout(r, ms));
+        const fills = () => [...document.querySelectorAll('#plotIt .highcharts-series-group .highcharts-point')].map(e => e.getAttribute('fill'));
+        const out = { offFills: [...new Set(fills())].every(f => /^#|^rgb/.test(f)) };
+        const cb = document.getElementById('plotPatterns');
+        out.labelled = cb.labels.length === 1 && /Add patterns/.test(cb.labels[0].textContent);
+        cb.click(); await wait(1200);
+        const f = fills();
+        out.allPattern = f.length > 0 && f.every(x => /^url\(#pht-pat-\d+\)$/.test(x));
+        out.distinct = new Set(f).size === plotState.chart.series.length;
+        out.legend = [...document.querySelectorAll('#plotIt .highcharts-legend-item')].every(li => [...li.querySelectorAll('[fill]')].some(e => /^url\(#pht-pat-/.test(e.getAttribute('fill'))));
+        out.defs = document.querySelectorAll('#plotIt defs pattern[id^="pht-pat-"]').length;
+        out.said = document.getElementById('sr-announcer').textContent;
+        const pt = plotState.chart.series[0].points.find(x => x.graphic); pt.setState('hover'); await wait(300);
+        out.hoverFill = pt.graphic.element.getAttribute('fill'); pt.setState('');
+        const gs = document.getElementById('globalSearch'); gs.value = 'autism'; gs.dispatchEvent(new Event('input', { bubbles: true })); await wait(1500);
+        out.afterFilter = fills().every(x => /^url\(#pht-pat-\d+\)$/.test(x));
+        document.querySelector('[data-action=reset]').click(); await wait(500);
+        out.subtitle = plotState.chart.subtitle.textStr;
+        return out;
+      });
+      check('"Add patterns" is a labelled checkbox; off by default', pat.labelled && pat.offFills, JSON.stringify({ labelled: pat.labelled, off: pat.offFills }));
+      check('patterns on: every segment has a pattern, a different one per colour, also in the legend', pat.allPattern && pat.distinct && pat.legend && pat.defs >= 2, JSON.stringify({ all: pat.allPattern, distinct: pat.distinct, legend: pat.legend, defs: pat.defs }));
+      check('patterns survive hover and filter changes; the change is announced', /^url\(#pht-pat-/.test(pat.hoverFill) && pat.afterFilter && /Patterns added/.test(pat.said), JSON.stringify({ hover: pat.hoverFill, afterFilter: pat.afterFilter, said: pat.said }));
+      check('subtitle explains segment order (a non-colour cue)', /stack in legend order, first at the top/.test(pat.subtitle), pat.subtitle);
+      await p.reload({ waitUntil: 'networkidle0' });
+      await p.waitForFunction(() => window.plotState && plotState.chart); await sleep(1200);
+      const kept = await p.evaluate(() => ({ checked: document.getElementById('plotPatterns').checked, fill: document.querySelector('#plotIt .highcharts-series-group .highcharts-point').getAttribute('fill') }));
+      check('the patterns choice is remembered after reload', kept.checked && /^url\(#pht-pat-/.test(kept.fill), JSON.stringify(kept));
+      await p.close();
+    }
+
+    // ----------------------------------- layout at common screen sizes (#19) ----
+    console.log('\nlayout at common screen sizes');
+    {
+      const rows = [];
+      for (const [w, h] of [[1024, 768], [1280, 800], [1366, 768], [1440, 900], [1920, 1080]]) {
+        const p = await browser.newPage();
+        await p.setViewport({ width: w, height: h });
+        await p.evaluateOnNewDocument(() => localStorage.setItem('pht_lab_tour_seen', 'true'));
+        await p.goto(base, { waitUntil: 'networkidle0' });
+        await p.waitForFunction(() => window.plotState && plotState.chart);
+        rows.push(await p.evaluate(w => {
+          const r = e => e.getBoundingClientRect();
+          const ov = (a, b) => { const A = r(a), B = r(b); return A.width && B.width && A.left < B.right - 1 && B.left < A.right - 1 && A.top < B.bottom - 1 && B.top < A.bottom - 1 };
+          const items = [...document.querySelectorAll('#myTab .item'), document.getElementById('copyLink'), document.querySelector('.hover-nav-trigger'), ...document.querySelectorAll('.chart-controls .chart-control')];
+          let overlaps = 0; for (let i = 0; i < items.length; i++) for (let j = i + 1; j < items.length; j++) if (ov(items[i], items[j])) overlaps++;
+          const bc = r(document.querySelector('.buttons-container'));
+          const outside = [...document.querySelectorAll('.buttons-container button')].filter(b => r(b).right > bc.right + 1 || r(b).left < bc.left - 1).length;
+          return { w, overlaps, outside, plotH: Math.round(plotState.chart.plotHeight) };
+        }, w));
+        await p.close();
+      }
+      check('1024–1920 px: header tabs, Copy link and chart controls never overlap', rows.every(r => r.overlaps === 0), JSON.stringify(rows.map(r => [r.w, r.overlaps])));
+      check('1024–1920 px: sidebar buttons stay inside the sidebar', rows.every(r => r.outside === 0), JSON.stringify(rows.map(r => [r.w, r.outside])));
+      check('1024–1920 px: the chart\'s plot area is at least 220 px tall', rows.every(r => r.plotH >= 220), JSON.stringify(rows.map(r => [r.w, r.plotH])));
+    }
+
     console.log('\naccessibility');
     const a11y = await openPage(browser, base);
     const violations = {};

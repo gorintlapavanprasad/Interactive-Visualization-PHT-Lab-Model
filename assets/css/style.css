@@ -3735,7 +3735,9 @@ ul li {
    when users enlarge text or letter spacing. */
 .ui.selection.dropdown>.default.text {
     white-space: normal;
-    text-overflow: clip
+    text-overflow: clip;
+    overflow: visible;
+    height: auto
 }
 
 /* Windows high contrast (#18): focus ring uses the system highlight colour */
@@ -3743,4 +3745,112 @@ ul li {
     :focus-visible {
         outline-color: Highlight !important
     }
+}
+
+/* "Add patterns" checkbox (#19): sits on the controls' baseline, 24px target */
+.chart-control.chart-check {
+    flex-direction: row;
+    align-items: center;
+    min-width: 0;
+    min-height: 40px;
+    gap: 8px
+}
+
+.chart-control.chart-check input {
+    width: 20px;
+    height: 20px;
+    margin: 2px;
+    accent-color: var(--ds-accent-primary);
+    cursor: pointer
+}
+
+.chart-control.chart-check label {
+    font-size: .9rem;
+    cursor: pointer;
+    padding: 4px 0
+}
+
+/* Header: columns size to their content and wrap onto a new line instead of
+   overlapping (tabs, "Group bars by" and Copy link collided below ~1400px). */
+@media screen and (min-width: 769px) {
+    .ui.grid.page-header>.column {
+        width: auto !important;
+        flex: 0 0 auto
+    }
+
+    .ui.grid.page-header>.column:first-child {
+        flex: 1 1 auto;
+        justify-content: flex-start
+    }
+
+    .ui.grid.page-header>.plotOptionsContainer {
+        flex: 0 1 340px;
+        min-width: 260px;
+        min-height: 52px
+    }
+
+    .ui.grid.page-header>.switchContainer {
+        margin-left: auto
+    }
+}
+
+/* "Group bars by" now lives with the other chart options (it only affects the
+   chart), so the header no longer has to fit it. */
+.chart-controls .plotOptionsDiv {
+    position: static;
+    transform: none;
+    opacity: 1;
+    visibility: visible;
+    height: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+    transition: none
+}
+
+.chart-controls .plot-by-label {
+    font-size: .8rem;
+    font-weight: 700;
+    color: var(--ds-text-primary)
+}
+
+.chart-controls .plotOptionsDiv {
+    flex: 0 1 260px
+}
+
+.chart-controls #plotFilter {
+    min-width: 200px
+}
+
+/* The header's options slot only takes room while the card field-hider is shown */
+@media screen and (min-width: 769px) {
+    .ui.grid.page-header>.plotOptionsContainer:not(:has(.plotFilterMultiSelect.expand)) {
+        flex: 0 0 0;
+        min-width: 0;
+        padding: 0;
+        overflow: hidden
+    }
+}
+
+/* Small windows: keep the chart readable (scroll the panel rather than squash
+   the plot), and let the sidebar tool buttons wrap instead of overflowing. */
+#show-plot-pane>#visual-panel.active {
+    overflow-y: auto
+}
+
+#visual-panel>#plotIt {
+    min-height: 540px
+}
+
+.buttons-container {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(84px, 1fr));
+    gap: 8px
+}
+
+.buttons-container>*,
+.buttons-container .import-wrapper .button {
+    width: auto !important;
+    margin: 0 !important
 }

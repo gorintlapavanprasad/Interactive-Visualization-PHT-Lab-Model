@@ -602,21 +602,7 @@
           </div>
 
           <div class="four wide computer fourteen wide mobile column plotOptionsContainer">
-            <div class="plotOptionsDiv expand" role="group"  
-              aria-hidden="false">
-            
-
-                  <span class="plot-by-label" id="plotFilterLabel" aria-hidden="true">Group bars by</span>
-                  <div class="ui search fluid selection dropdown" id="plotFilter">
-     
-    <input name="tags" type="hidden">
-    <i class="dropdown icon"></i>
-    <div class="default text">choose plot</div>
-    <div class="menu"></div>
-</div>
-
-            </div>
-            <div class="plotFilterMultiSelect" aria-hidden="true" inert>
+                        <div class="plotFilterMultiSelect" aria-hidden="true" inert>
 
                
                <div class="ui search fluid multiple selection dropdown" id="removeColumns">
@@ -686,6 +672,15 @@
               aria-labelledby="tab-visual">
               <h3 class="sr-only">Interactive Data Graph: Distribution and Frequency Trends</h3>
               <div class="chart-controls" role="group" aria-label="Chart options">
+                <div class="chart-control plotOptionsDiv expand" aria-hidden="false">
+                  <span class="plot-by-label" id="plotFilterLabel" aria-hidden="true">Group bars by</span>
+                  <div class="ui search fluid selection dropdown" id="plotFilter">
+    <input name="tags" type="hidden">
+    <i class="dropdown icon"></i>
+    <div class="default text">choose plot</div>
+    <div class="menu"></div>
+</div>
+                </div>
                 <div class="chart-control">
                   <label for="stackBy">Colour bars by</label>
                   <select id="stackBy"></select>
@@ -696,6 +691,11 @@
                     <option value="count">Number of studies</option>
                     <option value="percent">Percentages</option>
                   </select>
+                </div>
+                <div class="chart-control chart-check">
+                  <input type="checkbox" id="plotPatterns" aria-describedby="plotPatternsHelp" />
+                  <label for="plotPatterns">Add patterns</label>
+                  <span id="plotPatternsHelp" class="sr-only">Gives each colour its own texture, so segments can be matched to the legend without relying on colour.</span>
                 </div>
               </div>
               <div id="plotIt" role="group" aria-label="Interactive Data Graph. Use arrow keys to explore data points."

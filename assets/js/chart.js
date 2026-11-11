@@ -6,7 +6,65 @@ var plotState = { chart: null, totals: [], xLabel: '', configKey: '', mode: 'cou
 function chartControlState() {
     const s = document.getElementById('stackBy');
     const m = document.getElementById('plotMode');
-    return { stackCol: s ? s.value : STACK_DEFAULT, mode: m && m.value === 'percent' ? 'percent' : 'count' }
+    const pt = document.getElementById('plotPatterns');
+    return { stackCol: s ? s.value : STACK_DEFAULT, mode: m && m.value === 'percent' ? 'percent' : 'count', patterns: !!(pt && pt.checked) }
+}
+
+// ---- Patterns (#19): an optional texture on each colour, so colour-blind users
+// can match bar segments to the legend without relying on colour alone.
+const PATTERN_KEY = 'pht_lab_patterns';
+// 8x8 tile overlays (SVG path data); index 0 is plain.
+const PATTERN_PATHS = [
+    '',
+    'M0,8 L8,0 M-2,2 L2,-2 M6,10 L10,6',          // diagonal /
+    'M0,2 H8 M0,6 H8',                              // horizontal
+    'M2,2 h.01 M6,6 h.01',                          // dots
+    'M2,0 V8 M6,0 V8',                              // vertical
+    'M0,0 L8,8 M-2,6 L2,10 M6,-2 L10,2',            // diagonal \
+    'M0,8 L8,0 M0,0 L8,8',                          // cross-hatch
+    'M0,4 H8 M4,0 V8',                              // grid
+    'M4,4 h.01'                                     // big dot
+];
+const patternId = i => `pht-pat-${i}`;
+
+function ensureChartPatterns(chart) {
+    const defs = chart && chart.renderer && chart.renderer.defs && chart.renderer.defs.element;
+    if (!defs) return;
+    const NS = 'http://www.w3.org/2000/svg';
+    (chart.series || []).forEach((s, i) => {
+        const base = s.options.custom && s.options.custom.base;
+        if (!base) return;
+        const id = patternId(i);
+        let pat = defs.querySelector('#' + id);
+        if (pat && pat.getAttribute('data-base') === base) return;
+        if (pat) pat.remove();
+        pat = document.createElementNS(NS, 'pattern');
+        pat.setAttribute('id', id);
+        pat.setAttribute('data-base', base);
+        pat.setAttribute('patternUnits', 'userSpaceOnUse');
+        pat.setAttribute('width', '8');
+        pat.setAttribute('height', '8');
+        const rect = document.createElementNS(NS, 'rect');
+        rect.setAttribute('width', '8'); rect.setAttribute('height', '8'); rect.setAttribute('fill', base);
+        pat.appendChild(rect);
+        const d = PATTERN_PATHS[i % PATTERN_PATHS.length];
+        if (d) {
+            const rgb = [1, 3, 5].map(k => parseInt(base.slice(k, k + 2), 16));
+            const path = document.createElementNS(NS, 'path');
+            path.setAttribute('d', d);
+            path.setAttribute('stroke', bestTextColor(rgb));
+            path.setAttribute('stroke-opacity', '0.7');
+            path.setAttribute('stroke-linecap', 'round');
+            path.setAttribute('stroke-width', /h\.01/.test(d) ? (i % PATTERN_PATHS.length === 8 ? '3.5' : '2.5') : '1.5');
+            pat.appendChild(path);
+        }
+        defs.appendChild(pat)
+    });
+    // Repair fills left mid-tween ("color-mix(..., url(#...))" is not a valid fill).
+    (chart.series || []).forEach(s => {
+        if (!String(s.color).startsWith('url(')) return;
+        (s.points || []).forEach(p => { const g = p.graphic; if (g && g.element.getAttribute('fill') !== s.color) g.element.setAttribute('fill', s.color) })
+    })
 }
 
 function initChartControls() {
@@ -20,7 +78,16 @@ function initChartControls() {
     sel.value = STACK_DEFAULT;
     const redraw = () => { viewsDirty.plot = !0; renderVisibleViews() };
     sel.addEventListener('change', redraw);
-    document.getElementById('plotMode').addEventListener('change', redraw)
+    document.getElementById('plotMode').addEventListener('change', redraw);
+    const pt = document.getElementById('plotPatterns');
+    if (pt) {
+        try { pt.checked = localStorage.getItem(PATTERN_KEY) === 'on' } catch (e) { /* storage blocked */ }
+        pt.addEventListener('change', () => {
+            try { localStorage.setItem(PATTERN_KEY, pt.checked ? 'on' : 'off') } catch (e) { /* storage blocked */ }
+            announce(pt.checked ? 'Patterns added to chart colours.' : 'Patterns removed.');
+            redraw()
+        })
+    }
 }
 
 function Drawplot(PlotFilter) {
@@ -36,7 +103,7 @@ function Drawplot(PlotFilter) {
         textSecondary: getDSVar('--ds-text-secondary'),
         borderSubtle: getDSVar('--ds-border-subtle')
     };
-    const { stackCol: chosenStack, mode } = chartControlState();
+    const { stackCol: chosenStack, mode, patterns } = chartControlState();
     // Colouring a column by itself adds nothing; treat it as "none".
     const stackCol = chosenStack && chosenStack !== PlotFilter ? chosenStack : '';
     const total = filteredDataTmp.length;
@@ -88,6 +155,10 @@ function Drawplot(PlotFilter) {
                 : { y: count, count }
         })
     })).filter(s => s.data.some(p => p.count > 0));
+    // Patterns: each segment colour gets its own texture (legend too). The plain
+    // colour is kept in custom.base for the tooltip and the pattern itself.
+    const usePatterns = patterns && !!stackCol;
+    if (usePatterns) series.forEach((s, i) => { s.custom = { base: s.color }; s.color = `url(#${patternId(i)})` });
 
     updateAccessibleTable(categories, series, PlotFilter, studyTotals);
     if (series.length === 0) {
@@ -104,7 +175,7 @@ function Drawplot(PlotFilter) {
     const subtitle = stackCol
         ? (mode === 'percent'
             ? `Each bar = 100% of its studies' answers, split by ${escapeHtml(plotState.stackLabel)}. n under each bar = distinct studies.`
-            : `Numbers above bars = distinct studies. Colours = ${escapeHtml(plotState.stackLabel)}; a study with several answers appears in several colours.`)
+            : `Numbers above bars = distinct studies. Colours = ${escapeHtml(plotState.stackLabel)}; a study with several answers appears in several colours. Segments stack in legend order, first at the top.`)
         : (mode === 'percent'
             ? 'Bar height = % of the filtered studies that have this answer (studies with several answers count toward each).'
             : 'Number of studies with each answer (studies with several answers count toward each).');
@@ -112,7 +183,7 @@ function Drawplot(PlotFilter) {
     // Data-only changes (filters) do a light update; a change of colouring,
     // mode or theme applies the full options to the SAME chart (destroying and
     // re-creating it raced Highcharts' sonification audio: "AudioContext closed").
-    const configKey = [stackCol, mode, dark].join('|');
+    const configKey = [stackCol, mode, dark, usePatterns].join('|');
     if (plotState.chart && plotState.chart.series && plotState.configKey === configKey) {
         plotState.chart.update({
             title: { text: title },
@@ -127,6 +198,9 @@ function Drawplot(PlotFilter) {
     const opts = {
         colors: palette,
         chart: {
+            events: {
+                render: function () { ensureChartPatterns(this) }
+            },
             type: 'column',
             backgroundColor: ds.bgPanel,
             zooming: {
@@ -291,6 +365,8 @@ function Drawplot(PlotFilter) {
                 borderColor: ds.bgPanel,
                 borderRadius: 2,
                 cursor: 'pointer',
+                // Hover brightening can't be applied to a pattern fill.
+                states: { hover: { enabled: !usePatterns } },
                 point: {
                     events: {
                         click: function () {
@@ -318,7 +394,7 @@ function Drawplot(PlotFilter) {
                         ? (plotState.stacked ? ` (${Math.round(p.percentage || 0)}%)` : ` (${p.y}% of filtered)`)
                         : '';
                     const name = plotState.stacked ? escapeHtml(p.series.name) : 'Studies';
-                    html += `<span style="color:${p.color}">●</span> ${name}: <b>${n}</b>${pct}<br/>`
+                    html += `<span style="color:${(p.series.options.custom && p.series.options.custom.base) || p.color}">●</span> ${name}: <b>${n}</b>${pct}<br/>`
                 });
                 return html
             }
@@ -326,7 +402,10 @@ function Drawplot(PlotFilter) {
         series: series
     };
     plotState.configKey = configKey;
-    if (plotState.chart && plotState.chart.series) plotState.chart.update(opts, !0, !0);
+    // No animation when patterns switch: Highcharts can't tween a colour into a pattern.
+    const patternsChanged = !!plotState.patterns !== usePatterns;
+    plotState.patterns = usePatterns;
+    if (plotState.chart && plotState.chart.series) plotState.chart.update(opts, !0, !0, patternsChanged ? !1 : undefined);
     else plotState.chart = Highcharts.chart('plotIt', opts)
 }
 

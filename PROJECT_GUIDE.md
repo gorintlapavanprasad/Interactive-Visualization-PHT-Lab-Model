@@ -203,7 +203,7 @@ infrastructure, **P3** = nice to have.
 | T8 | P1 | ✅ **Done** (section 17): Gaps tab, a heatmap of any two dimensions with gaps highlighted | — |
 | T9 | P2 | ✅ **Done** (section 12): no requests to other servers | Works with network off |
 | T10 | P2 | ✅ Automated part done (0 axe violations; reflow at 400% zoom; see section 8). Tour updated to cover the new features (section 22). Remaining: sessions with real screen-reader users | Signed off by disabled testers |
-| T11 | P2 | ✅ **Done** (section 13): GitHub Actions runs lint, the data audit, 102 unit tests and 128 browser checks on every push and pull request (sections 19–24) | CI green on every push |
+| T11 | P2 | ✅ **Done** (section 13): GitHub Actions runs lint, the data audit, 102 unit tests and 137 browser checks on every push and pull request (sections 19–24) | CI green on every push |
 | T12 | P2 | ✅ **Done** (section 18): 10 focused script files, ESLint in CI, jQuery 3.7.1, grids from config | — |
 | T13 | P2 | ✅ Mostly done (section 14): unused files and dead code removed, README added. Remaining (owner's decisions): choose a project LICENSE, confirm the Highcharts licence, archive the old DataSpectra repo | — |
 | T14 | P2 | ✅ **Done.** Live on GitHub Pages | Public URL |
@@ -861,3 +861,24 @@ The skip-link check was also made reliable: it now checks that the link is first
 Most of these already passed. Changes:
 - Menu placeholders now wrap instead of being cut off with "…".
 - In forced-colours mode the focus ring uses the system Highlight colour.
+
+### #19: Colour-blind user, and the layout at common screen sizes
+
+**Measured:** the 7 viridis chart colours stay distinct under full protanopia, deuteranopia, tritanopia
+and achromatopsia simulation (Machado 2009). The smallest CIELAB difference between any two colours is
+8.7, in the dark theme. A check keeps it at 8 or above.
+
+**Added:**
+- **"Add patterns" checkbox** (chart options). It gives each colour its own texture, shown in the bars
+  and the legend, so segments can be matched without colour. The choice is remembered on this device.
+  The patterns are drawn as SVG patterns in the chart (no extra library).
+- **Chart subtitle:** "Segments stack in legend order, first at the top", a cue that doesn't use colour.
+
+**Layout fixes found while testing:**
+- At 1024–1440 px wide, the header tabs, "Group bars by" and Copy link overlapped. "Group bars by" now
+  sits with the other chart options, and the header wraps instead of overlapping.
+- On 768–800 px tall screens the chart was squashed to a 60–180 px plot area. The chart now has a
+  minimum height, and its panel scrolls.
+- The Reset/Import/Export/Redraw buttons overflowed a narrow sidebar. They now wrap.
+
+9 new checks, including overlaps, buttons and plot height at 1024, 1280, 1366, 1440 and 1920 px.

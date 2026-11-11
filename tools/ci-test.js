@@ -874,6 +874,90 @@ async function collectGolden(page) {
       await p.close();
     }
 
+    // ----------------------------------------- persona: low-vision user (#18) ----
+    console.log('\npersona: low-vision user (#18)');
+    {
+      const TABS = ['Show-plot', 'Show-data', 'ratings-grid', 'Show-grid', 'Show-gaps'];
+      const openAt = async (w, h) => {
+        const p = await browser.newPage();
+        await p.setViewport({ width: w, height: h });
+        await p.evaluateOnNewDocument(() => localStorage.setItem('pht_lab_tour_seen', 'true'));
+        await p.goto(base, { waitUntil: 'networkidle0' });
+        await p.waitForFunction(() => window.plotState && plotState.chart);
+        return p;
+      };
+      // 400% zoom = 320 CSS px wide: no sideways scrolling on any tab (WCAG 1.4.10)
+      let p = await openAt(320, 640);
+      const reflow = await p.evaluate(async TABS => {
+        const bad = [];
+        for (const t of TABS) {
+          $(`#myTab .item[data-tab="${t}"]`).trigger('click'); await new Promise(r => setTimeout(r, 400));
+          const d = document.documentElement;
+          if (d.scrollWidth > d.clientWidth + 1) bad.push(`${t}: ${d.scrollWidth}px`);
+        }
+        return bad;
+      }, TABS);
+      check('320 px wide (400% zoom): no sideways page scrolling on any tab', reflow.length === 0, reflow.join(', '));
+      // 200% zoom on a small laptop: every sidebar text field can be reached
+      await p.close(); p = await openAt(640, 400);
+      const fields = await p.evaluate(() => ['globalSearch', 'titleFilter', 'authorFilter', 'YearFilter', 'PagesFilter', 'NotesFilter']
+        .filter(id => { const e = document.getElementById(id); if (!e) return true; e.scrollIntoView({ block: 'center' }); const r = e.getBoundingClientRect(); return !(r.width > 0 && r.top >= 0 && r.bottom <= innerHeight) }));
+      check('200% zoom: every sidebar text field can be scrolled into view', fields.length === 0, fields.join(', '));
+      await p.close();
+      // text spacing overrides (WCAG 1.4.12): no clipped text in controls
+      p = await openAt(1280, 800);
+      const clipped = await p.evaluate(async TABS => {
+        const st = document.createElement('style');
+        st.textContent = '*{line-height:1.5!important;letter-spacing:.12em!important;word-spacing:.16em!important} p{margin-bottom:2em!important}';
+        document.head.appendChild(st);
+        const bad = new Set();
+        for (const t of TABS) {
+          $(`#myTab .item[data-tab="${t}"]`).trigger('click'); await new Promise(r => setTimeout(r, 400));
+          document.querySelectorAll('button, label, .ui.dropdown > .text, th, td, a, h1, h2, h3, h4, .chart-control select').forEach(e => {
+            if (!e.offsetParent || e.closest('.highcharts-container, .sr-only, .menu')) return;
+            const cs = getComputedStyle(e);
+            if ((e.scrollWidth > e.clientWidth + 2 && /hidden|clip/.test(cs.overflowX)) || (e.scrollHeight > e.clientHeight + 2 && /hidden|clip/.test(cs.overflowY))) bad.add(`${t}: ${e.textContent.trim().slice(0, 30)}`);
+          });
+        }
+        return [...bad];
+      }, TABS);
+      check('larger text spacing (1.4.12) clips no labels, buttons or table text', clipped.length === 0, clipped.slice(0, 5).join(' | '));
+      // dark theme: 0 axe violations (contrast) on every tab
+      await p.evaluate(AXE);
+      const dark = await p.evaluate(async TABS => {
+        document.querySelectorAll('style').forEach(s => { if (/letter-spacing:\.12em/.test(s.textContent)) s.remove() });
+        document.getElementById('theme').click(); await new Promise(r => setTimeout(r, 500));
+        const out = [];
+        for (const t of TABS) {
+          $(`#myTab .item[data-tab="${t}"]`).trigger('click'); await new Promise(r => setTimeout(r, 400));
+          const r = await axe.run(document, { runOnly: ['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa'] });
+          r.violations.forEach(v => out.push(`${t}: ${v.id} x${v.nodes.length}`));
+        }
+        document.getElementById('theme').click();
+        return out;
+      }, TABS);
+      check('dark theme: 0 axe WCAG 2.2 AA violations (incl. contrast) on every tab', dark.length === 0, dark.join(', '));
+      await p.close();
+      // Windows forced colours (high contrast): chart keeps its colours, focus stays visible
+      p = await openAt(1440, 900);
+      const cdp = await p.createCDPSession();
+      await cdp.send('Emulation.setEmulatedMedia', { features: [{ name: 'forced-colors', value: 'active' }] });
+      await sleep(400);
+      const fc = await p.evaluate(() => {
+        const pt = document.querySelector('#plotIt .highcharts-point');
+        return { on: matchMedia('(forced-colors: active)').matches, keep: pt && getComputedStyle(pt).forcedColorAdjust };
+      });
+      // focus with the real keyboard (:focus-visible), on the first few controls
+      fc.outlines = [];
+      for (let i = 0; i < 4; i++) {
+        await p.keyboard.press('Tab');
+        fc.outlines.push(await p.evaluate(() => { const cs = getComputedStyle(document.activeElement); return cs.outlineStyle !== 'none' && parseFloat(cs.outlineWidth) >= 2 }));
+      }
+      fc.outline = fc.outlines.every(Boolean) ? 'visible' : 'none';
+      check('forced colours: chart segments keep their colours and focus is still outlined', fc.on && fc.keep !== 'auto' && fc.outline === 'visible', JSON.stringify(fc));
+      await p.close();
+    }
+
     console.log('\naccessibility');
     const a11y = await openPage(browser, base);
     const violations = {};

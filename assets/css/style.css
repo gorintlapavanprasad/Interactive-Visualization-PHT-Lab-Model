@@ -3730,3 +3730,17 @@ ul li {
     padding-left: .4em;
     padding-right: .4em
 }
+
+/* Low vision (#18): menu placeholders wrap instead of being cut off with "…"
+   when users enlarge text or letter spacing. */
+.ui.selection.dropdown>.default.text {
+    white-space: normal;
+    text-overflow: clip
+}
+
+/* Windows high contrast (#18): focus ring uses the system highlight colour */
+@media (forced-colors: active) {
+    :focus-visible {
+        outline-color: Highlight !important
+    }
+}

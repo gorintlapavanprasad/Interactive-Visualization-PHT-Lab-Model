@@ -1300,6 +1300,49 @@ async function collectGolden(page) {
       await p.close();
     }
 
+    // ----------------------------- persona: vestibular / photosensitive user (#24) ----
+    console.log('\npersona: vestibular / photosensitive user (#24)');
+    {
+      // normal settings: nothing moves by itself once the page is idle
+      let p = await browser.newPage();
+      await p.setViewport({ width: 1440, height: 900 });
+      await p.evaluateOnNewDocument(() => localStorage.setItem('pht_lab_tour_seen', 'true'));
+      await p.goto(base, { waitUntil: 'networkidle0' });
+      await p.waitForFunction(() => window.plotState && plotState.chart);
+      await sleep(2500);
+      const idle = await p.evaluate(() => document.getAnimations().filter(a => a.playState === 'running').map(a => (a.effect && a.effect.target && (a.effect.target.id || a.effect.target.className)) + ' ' + (a.effect && a.effect.getComputedTiming().iterations)));
+      check('nothing moves or flashes on its own once the page has loaded', idle.length === 0, idle.slice(0, 3).join(' | '));
+      await p.close();
+      // with "reduce motion" switched on in the system
+      p = await browser.newPage();
+      await p.setViewport({ width: 1440, height: 900 });
+      await p.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }]);
+      await p.evaluateOnNewDocument(() => localStorage.setItem('pht_lab_tour_seen', 'true'));
+      await p.goto(base, { waitUntil: 'networkidle0' });
+      await p.waitForFunction(() => window.plotState && plotState.chart);
+      const r = await p.evaluate(async () => {
+        const wait = ms => new Promise(res => setTimeout(res, ms));
+        const c = plotState.chart;
+        const out = { media: reducedMotion(), chartAnim: c.options.chart.animation, seriesAnim: c.series[0].options.animation, scroll: scrollBehavior() };
+        // a filter change shows the final bar heights at once (no growing bars)
+        const heights = () => c.series.flatMap(s => s.points.map(pt => pt.graphic ? Math.round(+pt.graphic.attr('height') || 0) : 0)).join(',');
+        const gs = document.getElementById('globalSearch');
+        gs.value = 'blind'; applyFilters(); await wait(30);
+        const soon = heights(); await wait(1000);
+        out.instant = soon === heights();
+        document.querySelector('[data-action=reset]').click(); await wait(300);
+        // CSS transitions and animations are effectively off
+        const b = document.querySelector('[data-action=reset]');
+        out.transition = getComputedStyle(b).transitionDuration;
+        out.iterations = getComputedStyle(document.querySelector('.hover-nav-menu')).animationIterationCount;
+        return out;
+      });
+      check('reduce motion: detected; chart animation off; scrolling jumps instead of gliding', r.media && r.chartAnim === false && r.seriesAnim === false && r.scroll === 'auto', JSON.stringify(r));
+      check('reduce motion: a filter change shows the final chart at once', r.instant);
+      check('reduce motion: CSS transitions are cut to ~0 and animations run once at most', parseFloat(r.transition) <= 0.001 && r.iterations === '1', `transition ${r.transition}, iterations ${r.iterations}`);
+      await p.close();
+    }
+
     console.log('\naccessibility');
     const a11y = await openPage(browser, base);
     const violations = {};

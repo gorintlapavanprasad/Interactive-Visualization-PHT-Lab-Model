@@ -164,3 +164,11 @@ function noStudiesHtml() {
         '<button type="button" class="ui button" data-action="reset"><i class="undo icon" aria-hidden="true"></i> Reset all filters</button>' +
         '</div>'
 }
+
+// ---- Reduced motion (#24) ---------------------------------------------------
+// True when the user asked the system for less motion. CSS handles transitions;
+// this covers motion started from script (chart animation, smooth scrolling).
+function reducedMotion() {
+    return !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)
+}
+const scrollBehavior = () => reducedMotion() ? 'auto' : 'smooth';

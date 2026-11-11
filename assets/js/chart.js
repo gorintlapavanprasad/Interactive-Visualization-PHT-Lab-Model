@@ -192,12 +192,14 @@ function Drawplot(PlotFilter) {
             series: series
         }, !1, !0);
         plotState.chart.reflow();
-        plotState.chart.redraw({ duration: 200 });
+        plotState.chart.redraw(reducedMotion() ? false : { duration: 200 });
         return
     }
     const opts = {
         colors: palette,
         chart: {
+            // No growing bars for users who asked for reduced motion (#24).
+            animation: !reducedMotion(),
             events: {
                 render: function () { ensureChartPatterns(this) }
             },
@@ -364,6 +366,7 @@ function Drawplot(PlotFilter) {
                 borderWidth: 1,
                 borderColor: ds.bgPanel,
                 borderRadius: 2,
+                animation: !reducedMotion(),
                 cursor: 'pointer',
                 // Hover brightening can't be applied to a pattern fill.
                 states: { hover: { enabled: !usePatterns } },

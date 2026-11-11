@@ -252,7 +252,7 @@ function jumpToStudyFromModal(uid) {
         if (!$target.length) return;
         $target.addClass('jump-highlight');
         $target[0].scrollIntoView({
-            behavior: 'smooth',
+            behavior: scrollBehavior(),
             block: 'nearest'
         });
         $target.attr('tabindex', '-1').focus();

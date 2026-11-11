@@ -203,7 +203,7 @@ infrastructure, **P3** = nice to have.
 | T8 | P1 | ✅ **Done** (section 17): Gaps tab, a heatmap of any two dimensions with gaps highlighted | — |
 | T9 | P2 | ✅ **Done** (section 12): no requests to other servers | Works with network off |
 | T10 | P2 | ✅ Automated part done (0 axe violations; reflow at 400% zoom; see section 8). Tour updated to cover the new features (section 22). Remaining: sessions with real screen-reader users | Signed off by disabled testers |
-| T11 | P2 | ✅ **Done** (section 13): GitHub Actions runs lint, the data audit, 102 unit tests and 156 browser checks on every push and pull request (sections 19–24) | CI green on every push |
+| T11 | P2 | ✅ **Done** (section 13): GitHub Actions runs lint, the data audit, 102 unit tests and 160 browser checks on every push and pull request (sections 19–24) | CI green on every push |
 | T12 | P2 | ✅ **Done** (section 18): 10 focused script files, ESLint in CI, jQuery 3.7.1, grids from config | — |
 | T13 | P2 | ✅ Mostly done (section 14): unused files and dead code removed, README added. Remaining (owner's decisions): choose a project LICENSE, confirm the Highcharts licence, archive the old DataSpectra repo | — |
 | T14 | P2 | ✅ **Done.** Live on GitHub Pages | Public URL |
@@ -950,3 +950,21 @@ Fixes:
 
 Nothing needed fixing. Sound plays only on request ("Play as sound", or Enter/click on a bar), and it
 never carries information that isn't also shown on screen.
+
+### #24: Vestibular / photosensitive user (motion)
+
+4 new checks:
+- Nothing moves or flashes once the page has loaded.
+- With the system's "reduce motion" on:
+  - Chart animation is off and scrolling jumps instead of gliding.
+  - A filter change shows the final chart at once.
+  - CSS transitions are cut to about 0, and animations run at most once.
+
+Fixes:
+- **The chart grew its bars and smooth-scrolled** even when the user had asked for reduced motion.
+  `reducedMotion()` (in shared.js) now turns off chart animation and smooth scrolling (tour, study jumps).
+- **Some transitions ignored the reduced-motion rule.** Component rules such as `.ui.button { transition:
+  … !important }` were more specific than the old `*` rule. The rule now carries ID-level weight. It
+  also caps animations at one run, so nothing can loop quickly.
+
+There is no flashing content. The only keyframe animation is a one-off 0.2 s fade-in.

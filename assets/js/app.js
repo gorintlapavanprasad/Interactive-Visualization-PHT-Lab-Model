@@ -341,7 +341,7 @@ function startGuidedTour() {
                 enabled: !0
             },
             scrollTo: {
-                behavior: 'smooth',
+                behavior: scrollBehavior(),
                 block: 'center'
             }
         }

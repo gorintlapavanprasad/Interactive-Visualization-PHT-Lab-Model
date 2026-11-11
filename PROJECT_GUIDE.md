@@ -833,14 +833,8 @@ All work is now tracked as issues and milestones:
 - **M3:** polish and enhancements.
 - **M4:** decisions only the owner can make.
 
-Each issue is done on its own: add pass/fail checks for it, fix one failure at a time, run Unknown command: "test"
-
-
-Did you mean this?
-  npm test # Test a package
-To see a list of supported npm commands, run:
-  npm help,
-push with , wait for CI to pass, then check the live site.
+Each issue is done on its own: add pass/fail checks for it, fix one failure at a time, run `cd tools && npm test`,
+push with `Fixes #N` in the commit message, wait for CI to pass, then check the live site.
 
 ### #17: Blind screen-reader user
 

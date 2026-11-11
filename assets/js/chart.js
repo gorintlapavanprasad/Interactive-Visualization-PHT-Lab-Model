@@ -163,7 +163,7 @@ function Drawplot(PlotFilter) {
     updateAccessibleTable(categories, series, PlotFilter, studyTotals);
     if (series.length === 0) {
         plotEl.style.display = "none";
-        errorEl.innerHTML = `<div class="mx-auto"><img src="media/undraw_no_data_re_kwbl.svg" class="error-svg" alt="No data"><h5>No Data</h5></div>`;
+        errorEl.innerHTML = noStudiesHtml();
         return
     }
     plotState.totals = studyTotals;

@@ -526,21 +526,21 @@
         <div class="sidebar-row-3 ui basic segment">
 
           <div class="records">
-            <h2 class="recordsStatus ui aligned header">Records</h2>
+            <h2 class="recordsStatus ui aligned header">Studies</h2>
             <div class="ui two column centered grid" role="presentation">
 
-              <div class="column center aligned" role="group" aria-label="Filtered Count">
+              <div class="column center aligned" role="group" aria-label="Studies shown">
                 <div class="ui small header" aria-hidden="true">
                   <span class="label-color"><i class="filter icon"></i></span>
-                  <div class="content label-color">Filtered</div>
+                  <div class="content label-color">Shown</div>
                 </div>
                 <span id="filtered-count-value" class="currentRecords lable-value"></span>
               </div>
 
-              <div class="column center aligned" role="group" aria-label="Total Count">
+              <div class="column center aligned" role="group" aria-label="Studies in total">
                 <div class="ui small header" aria-hidden="true">
                   <span class="label-color"><i class="table icon"></i></span>
-                  <div class="content label-color">Total</div>
+                  <div class="content label-color">In total</div>
                 </div>
                 <span class="totalRecords lable-value"></span>
               </div>
@@ -652,7 +652,7 @@
           <div class="ui tab active" data-tab="Show-plot" id="show-plot-pane" role="tabpanel" tabindex="0"
             aria-labelledby="sr-plot-main-title">
 
-            <h2 id="sr-plot-main-title" class="sr-only">Research Trends Visualization: Comprehensive Analysis</h2>
+            <h2 id="sr-plot-main-title" class="sr-only">Chart: number of studies by year or by any coded answer</h2>
 
             <div class="ui top attached tabular menu mx-auto" role="tablist" aria-label="Plot view options">
               <a class="item active" data-tab="Show-plot/visual" role="tab" aria-selected="true" tabindex="0"
@@ -668,7 +668,7 @@
 
             <div class="ui tab active" id="visual-panel" data-tab="Show-plot/visual" role="tabpanel"
               aria-labelledby="tab-visual">
-              <h3 class="sr-only">Interactive Data Graph: Distribution and Frequency Trends</h3>
+              <h3 class="sr-only">Chart and its options</h3>
               <div class="chart-controls" role="group" aria-label="Chart options">
                 <div class="chart-control plotOptionsDiv expand" aria-hidden="false">
                   <span class="plot-by-label" id="plotFilterLabel" aria-hidden="true">Group bars by</span>
@@ -705,7 +705,7 @@
               aria-labelledby="sr-plot-table-title">
 
               <div id="plotDataTableContainer" tabindex="0" role="region" aria-labelledby="sr-plot-table-title">
-                <h3 id="sr-plot-table-title" class="ui header">Tabular Data View: Categorical Breakdowns</h3>
+                <h3 id="sr-plot-table-title" class="ui header">The chart as a table</h3>
 
                 <table id="plotDataTable" class="ui celled striped table" aria-labelledby="sr-plot-table-title">
                   <thead>
@@ -772,8 +772,7 @@
 
           <div class="ui tab" data-tab="ratings-grid" id="ratings-pane" role="tabpanel" tabindex="0"
             aria-labelledby="sr-ratings-title">
-            <h2 id="sr-ratings-title" class="sr-only">Classification Distribution: Frequency of Ratings along the
-              Research Framework</h2>
+            <h2 id="sr-ratings-title" class="sr-only">Ratings: how many studies sit at each point of each PHT Lab spectrum</h2>
             <div class="spectrum-error"></div>
             <div class="d-flex flex-wrap spectrumRow">
               <div class="spectrumContainer">
@@ -783,7 +782,7 @@
                   <i class="circle info icon"></i>
                 </div>
 
-                <h3 class="">Ratings along each classification</h3>
+                <h3 class="">How many studies sit at each point of each spectrum</h3>
 
                 <div class="flexRow flex-grow-1">
                   <div class="innerCol col-60">
@@ -803,8 +802,7 @@
 
           <div class="ui tab" data-tab="Show-grid" id="Show-grid-pane" role="tabpanel" tabindex="0"
             aria-labelledby="sr-spectrum-title">
-            <h2 id="sr-spectrum-title" class="sr-only">Heatmap Frequency: Intensity of Categorical Ratings across Study
-              Dimensions</h2>
+            <h2 id="sr-spectrum-title" class="sr-only">Spectrum: the same counts as a colour heat map</h2>
             <div class="spectrum-error"></div>
             <div class="d-flex flex-wrap spectrumRow">
               <div class="spectrumContainer">
@@ -814,7 +812,7 @@
                   <i class="circle info icon"></i>
                 </div>
 
-                <h3 class="">Frequency of ratings along each categorical spectrum</h3>
+                <h3 class="">How many studies sit at each point of each spectrum (darker = more)</h3>
 
                 <div class="flexRow flex-grow-1">
                   <div class="innerCol col-60">

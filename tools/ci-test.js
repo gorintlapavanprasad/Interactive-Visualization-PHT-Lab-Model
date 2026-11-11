@@ -691,7 +691,7 @@ async function collectGolden(page) {
         const dois = [...bib.text.matchAll(/doi = \{([^}]*)\}/g)].map(m => m[1].replace(/\\_/g, '_'));
         // nothing to export -> a message instead of an empty file
         document.getElementById('globalSearch').value = 'zzzqqqxx'; applyFilters(); await wait(50);
-        let alerted = ''; const oa = window.alert; window.alert = m => { alerted = m }; downloadText.last = null; exportCsv(); window.alert = oa;
+        downloadText.last = null; exportCsv(); await wait(150); const alerted = document.getElementById('sr-announcer').textContent;
         return {
           csv: { name: csv.filename, bom: csv.text.charCodeAt(0) === 0xFEFF, rows: parsed.length, want: rows.length, sameOrder: parsed.map(r => r.Title).join('|') === rows.map(r => r.Title).join('|'), cols: Object.keys(parsed[0] || {}).length, wantCols: Object.keys(csvData[0]).length },
           bib: { name: bib.filename, entries: keys.length, unique: new Set(keys).size, want: rows.length, doisMatch: dois.join() === rows.filter(r => r.DOI).map(r => r.DOI).join() },
@@ -726,7 +726,7 @@ async function collectGolden(page) {
       check('pasting a new link into the tab applies it', pasted.box === 'autism' && pasted.n > 0 && pasted.n < 216, JSON.stringify(pasted));
       check('CSV download: every filtered study in display order, all columns, Excel-friendly', dl.csv.rows === dl.csv.want && dl.csv.want > 0 && dl.csv.sameOrder && dl.csv.cols === dl.csv.wantCols && dl.csv.bom && /\.csv$/.test(dl.csv.name), JSON.stringify(dl.csv));
       check('BibTeX download: one entry per filtered study, unique keys, matching DOIs', dl.bib.entries === dl.bib.want && dl.bib.unique === dl.bib.want && dl.bib.doisMatch && /\.bib$/.test(dl.bib.name), JSON.stringify(dl.bib));
-      check('nothing to download -> a message, not an empty file', /No studies/.test(dl.empty.alerted) && !dl.empty.wrote, JSON.stringify(dl.empty));
+      check('nothing to download -> a spoken message (no pop-up), not an empty file', /No studies/.test(dl.empty.alerted) && !dl.empty.wrote, JSON.stringify(dl.empty));
       await A.close();
       await B.close();
     }
@@ -1204,6 +1204,63 @@ async function collectGolden(page) {
       check('no single-key shortcuts change anything (2.1.4)', r.noShortcuts);
       check('gear menu: a click opens it (aria-expanded), Escape closes it and returns focus', r.open.expanded === 'true' && r.open.shown && r.closed.expanded === 'false' && !r.closed.shown && r.closed.focusOnGear, JSON.stringify({ open: r.open, closed: r.closed }));
       check('the card field hider has a visible "Hide fields" label matching its name', r.hider);
+      await p.close();
+    }
+
+    // --------------------------- persona: cognitive / learning disability (#22) ----
+    console.log('\npersona: cognitive / learning disability (#22)');
+    {
+      const p = await browser.newPage();
+      await p.setViewport({ width: 1440, height: 900 });
+      await p.evaluateOnNewDocument(() => localStorage.setItem('pht_lab_tour_seen', 'true'));
+      await p.goto(base, { waitUntil: 'networkidle0' });
+      await p.waitForFunction(() => window.plotState && plotState.chart);
+      const r = await p.evaluate(async () => {
+        const wait = ms => new Promise(res => setTimeout(res, ms));
+        const out = {};
+        // 1. a search with no results: every view explains it and offers Reset
+        const gs = document.getElementById('globalSearch');
+        gs.value = 'zzqxvnothing'; gs.dispatchEvent(new Event('input', { bubbles: true })); await wait(1000);
+        out.empty = {};
+        for (const [t, dv] of [['Show-plot'], ['Show-data', 'cards'], ['Show-data', 'table'], ['ratings-grid'], ['Show-grid'], ['Show-gaps']]) {
+          $(`#myTab .item[data-tab="${t}"]`).trigger('click'); await wait(400);
+          if (dv) { document.querySelector(`.view-toggle [data-view="${dv}"]`).click(); await wait(300) }
+          const es = [...document.querySelectorAll('#myTabContent > .tab.active .empty-state')].filter(e => e.offsetParent);
+          out.empty[t + (dv ? '/' + dv : '')] = es.length > 0 && /No studies match your filters/.test(es[0].textContent) && !!es[0].querySelector('[data-action=reset]');
+        }
+        document.querySelector('.view-toggle [data-view="cards"]')?.click();
+        $('#myTab .item[data-tab="Show-plot"]').trigger('click'); await wait(300);
+        document.querySelector('#myTabContent > .tab.active .empty-state [data-action=reset]').click(); await wait(500);
+        out.resetFromEmpty = filteredDataTmp.length === csvData.length && !document.querySelector('#myTabContent > .tab.active .empty-state');
+        // 2. plain language: short sentences in headings, help, subtitles, hints and tour
+        const texts = [...document.querySelectorAll('h1, h2, h3, h4, label, .help, [id$="-help"], .gap-intro, .gap-keys-hint, .gap-summary, #myTabContent p, .chart-control label')]
+          .map(e => e.textContent.replace(/\s+/g, ' ').trim()).filter(Boolean);
+        texts.push(plotState.chart.subtitle.textStr);
+        if (typeof startGuidedTour === 'function') {
+          startGuidedTour(); await wait(300);
+          (Shepherd.activeTour?.steps || []).forEach(st => { const t = st.options.text; if (typeof t === 'string') texts.push(t.replace(/<[^>]+>/g, ' ')) });
+          Shepherd.activeTour?.cancel();
+        }
+        const sentences = texts.flatMap(t => t.split(/(?<=[.!?])\s+/)).map(x => x.trim()).filter(x => x.split(/\s+/).length > 2);
+        const len = x => x.split(/\s+/).length;
+        out.longest = sentences.reduce((a, b) => len(b) > len(a) ? b : a, '');
+        out.longestWords = len(out.longest);
+        out.avg = Math.round(10 * sentences.reduce((a, b) => a + len(b), 0) / sentences.length) / 10;
+        out.count = sentences.length;
+        // 3. consistent wording: the sidebar counts talk about studies, not "records"
+        out.records = /\bRecords?\b/.test(document.querySelector('.records').innerText);
+        out.studiesHeading = document.querySelector('.recordsStatus').textContent.trim();
+        // 4. the tour can be replayed from the gear menu
+        out.replay = !!document.getElementById('restartTourButton') && /Start Tour/i.test(document.getElementById('restartTourButton').textContent);
+        // 5. no automatic refresh or redirects
+        out.noRefresh = !document.querySelector('meta[http-equiv="refresh" i]');
+        return out;
+      });
+      check('no results: every view explains it and offers "Reset all filters"', Object.values(r.empty).every(Boolean), JSON.stringify(r.empty));
+      check('Reset from the empty state brings all studies back', r.resetFromEmpty);
+      check('plain language: no sentence over 30 words; average 20 or fewer', r.longestWords <= 30 && r.avg <= 20, `${r.count} sentences, avg ${r.avg} words, longest ${r.longestWords}: "${r.longest.slice(0, 80)}…"`);
+      check('the sidebar counts say "Studies", not "Records"', !r.records && r.studiesHeading === 'Studies', r.studiesHeading);
+      check('the guided tour can be replayed; nothing refreshes by itself', r.replay && r.noRefresh);
       await p.close();
     }
 

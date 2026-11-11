@@ -129,13 +129,13 @@ const today = () => new Date().toISOString().slice(0, 10);
 
 function exportCsv() {
     const rows = sortedRows();
-    if (!rows.length) return alert('No studies to export.');
+    if (!rows.length) return announce('No studies to download. Remove a filter first.');
     // BOM so Excel opens accented names (Sánchez, Jesús) correctly
     downloadText(`pht-lab-studies-${today()}.csv`, '\uFEFF' + toCsv(rows, Object.keys(csvData[0])), 'text/csv;charset=utf-8')
 }
 
 function exportBibtex() {
     const rows = sortedRows();
-    if (!rows.length) return alert('No studies to export.');
+    if (!rows.length) return announce('No studies to download. Remove a filter first.');
     downloadText(`pht-lab-studies-${today()}.bib`, toBibtex(rows), 'application/x-bibtex;charset=utf-8')
 }

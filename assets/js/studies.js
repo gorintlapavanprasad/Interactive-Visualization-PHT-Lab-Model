@@ -256,7 +256,7 @@ function renderTablePage(rows) {
         });
         return tr
     }));
-    if (!rows.length) tbody.innerHTML = `<tr><td colspan="${tableColumns.length}">No studies match these filters.</td></tr>`;
+    if (!rows.length) tbody.innerHTML = `<tr><td colspan="${tableColumns.length}">${noStudiesHtml()}</td></tr>`;
     const pages = Math.max(1, Math.ceil(filteredDataTmp.length / pageSize()));
     table.querySelector('caption').textContent = `Studies${sortState.col ? `, sorted by ${columnLabel(sortState.col)} ${sortState.dir === 'asc' ? 'ascending' : 'descending'}` : ''}; page ${currentPage} of ${pages}, ${filteredDataTmp.length} studies`
 }
@@ -276,7 +276,7 @@ function renderDataPage(page) {
     } else {
         document.querySelector('#studyTable tbody').replaceChildren();
         ui.replaceChildren(...slice.map(buildStudyCard));
-        if (!slice.length) ui.innerHTML = '<p class="no-results" role="status">No studies match these filters.</p>'
+        if (!slice.length) ui.innerHTML = noStudiesHtml()
     }
 }
 

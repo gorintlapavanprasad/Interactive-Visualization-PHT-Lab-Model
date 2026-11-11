@@ -61,6 +61,13 @@ function renderGaps() {
     const hide = document.getElementById('gapHideNA').checked;
     const keep = v => !hide || !GAP_HIDDEN.has(canon(v));
     const summary = document.getElementById('gap-summary');
+    const wrap = table.closest('.gap-table-wrap');
+    if (wrap) wrap.hidden = filteredDataTmp.length === 0;
+    if (filteredDataTmp.length === 0) {
+        // A table of zeros would read as "nothing studied"; say what happened instead (#22).
+        summary.innerHTML = noStudiesHtml();
+        return
+    }
     if (rowCol === colCol) {
         table.querySelector('thead').innerHTML = '';
         table.querySelector('tbody').innerHTML = '';

@@ -154,3 +154,13 @@ function enableRovingCells(table, cellSelector) {
         moveTo(c, target)
     })
 }
+
+// ---- Empty state (#22): say what happened and what to do next ---------------
+// The Reset button uses the page's data-action handler (app.js).
+function noStudiesHtml() {
+    return '<div class="empty-state">' +
+        '<p class="empty-title">No studies match your filters.</p>' +
+        '<p>Try removing a filter or using fewer search words.</p>' +
+        '<button type="button" class="ui button" data-action="reset"><i class="undo icon" aria-hidden="true"></i> Reset all filters</button>' +
+        '</div>'
+}

@@ -60,7 +60,7 @@ function validateAndApply() {
 
 function applyFilters(args) {
     if (args === "reset") {
-        document.querySelector(".recordsStatus").innerHTML = `Records `;
+        document.querySelector(".recordsStatus").innerHTML = `Studies `;
         TEXT_FILTER_IDS.forEach(id => {
             const el = document.getElementById(id);
             if (el) {
@@ -155,7 +155,7 @@ function applyFilters(args) {
     renderTable(filteredData);
     updateFilterCounts(filteredData, facetBase);
     const isActive = filteredData.length < csvData.length;
-    document.querySelector(".recordsStatus").innerHTML = `Records ${isActive ? '<span class="ui green empty circular label" role="img" aria-label="Filters active"></span>' : ''}`;
+    document.querySelector(".recordsStatus").innerHTML = `Studies ${isActive ? '<span class="ui green empty circular label" role="img" aria-label="Filters active"></span>' : ''}`;
     announceResults()
 }
 

@@ -3920,3 +3920,24 @@ ul li {
     flex: 1 1 auto;
     min-width: 0
 }
+
+/* Empty state (#22): plain message + a way out */
+.empty-state {
+    margin: 24px auto;
+    max-width: 30rem;
+    padding: 20px;
+    text-align: center;
+    border: 1px dashed var(--ds-border-strong, #64748b);
+    border-radius: 8px;
+    color: var(--ds-text-primary)
+}
+
+.empty-state .empty-title {
+    font-weight: 700;
+    font-size: 1.05rem;
+    margin-bottom: 4px
+}
+
+.empty-state .ui.button {
+    margin-top: 8px
+}

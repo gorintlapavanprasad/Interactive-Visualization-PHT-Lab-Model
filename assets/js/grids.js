@@ -59,7 +59,7 @@ function displaySpectrum() {
         errors[i].style.display = "none";
         if (filteredDataTmp.length === 0) {
             errors[i].style.display = "flex";
-            errors[i].innerHTML = `<div class="mx-auto"><img src="media/undraw_no_data_re_kwbl.svg" class="error-svg" alt="No data available"><h5>No Data</h5></div>`;
+            errors[i].innerHTML = noStudiesHtml();
             r.style.display = "none"
         }
     });

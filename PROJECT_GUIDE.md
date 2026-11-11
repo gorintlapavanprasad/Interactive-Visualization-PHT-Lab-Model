@@ -203,7 +203,7 @@ infrastructure, **P3** = nice to have.
 | T8 | P1 | ✅ **Done** (section 17): Gaps tab, a heatmap of any two dimensions with gaps highlighted | — |
 | T9 | P2 | ✅ **Done** (section 12): no requests to other servers | Works with network off |
 | T10 | P2 | ✅ Automated part done (0 axe violations; reflow at 400% zoom; see section 8). Tour updated to cover the new features (section 22). Remaining: sessions with real screen-reader users | Signed off by disabled testers |
-| T11 | P2 | ✅ **Done** (section 13): GitHub Actions runs lint, the data audit, 102 unit tests and 148 browser checks on every push and pull request (sections 19–24) | CI green on every push |
+| T11 | P2 | ✅ **Done** (section 13): GitHub Actions runs lint, the data audit, 102 unit tests and 153 browser checks on every push and pull request (sections 19–24) | CI green on every push |
 | T12 | P2 | ✅ **Done** (section 18): 10 focused script files, ESLint in CI, jQuery 3.7.1, grids from config | — |
 | T13 | P2 | ✅ Mostly done (section 14): unused files and dead code removed, README added. Remaining (owner's decisions): choose a project LICENSE, confirm the Highcharts licence, archive the old DataSpectra repo | — |
 | T14 | P2 | ✅ **Done.** Live on GitHub Pages | Public URL |
@@ -918,3 +918,24 @@ Fixes:
   or search..." is now "choose fields to hide…".
 
 Switch users also benefit from #20 (one Tab stop per grid).
+
+### #22: Cognitive / learning disability user
+
+5 new checks:
+- With no results, every view explains why and offers "Reset all filters".
+- Reset from there works.
+- Plain language: no sentence over 30 words, and an average of 20 or fewer across headings, help,
+  subtitles and the tour.
+- Consistent "Studies" wording.
+- The tour can be replayed, and nothing refreshes by itself.
+
+Fixes:
+- **Empty results:** the chart and grids said only "No Data" (with a picture). The Gaps tab drew a table
+  of zeros, which reads as "nothing has been studied". Every view now says "No studies match your
+  filters. Try removing a filter or using fewer search words." with a Reset button.
+- **Jargon headings rewritten**, e.g. "Heatmap Frequency: Intensity of Categorical Ratings across Study
+  Dimensions" became "Spectrum: the same counts as a colour heat map".
+- **Sidebar counts:** "Records: Filtered / Total" became "Studies: Shown / In total", the same word used
+  everywhere else.
+- **"Nothing to download"** no longer opens a pop-up alert. It is announced instead (the empty state is
+  already on screen).

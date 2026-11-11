@@ -106,7 +106,8 @@ async function collectGolden(page) {
 (async () => {
   fs.mkdirSync(ART, { recursive: true });
   const srv = await serve();
-  const base = `http://127.0.0.1:${srv.address().port}/`;
+  // BASE_URL runs every check against another copy (e.g. the live site) for regression testing
+  const base = process.env.BASE_URL || `http://127.0.0.1:${srv.address().port}/`;
   const browser = await puppeteer.launch({
     executablePath: CHROME, headless: 'new', protocolTimeout: 600000,
     args: process.env.CI ? ['--no-sandbox', '--disable-dev-shm-usage'] : []
@@ -1038,12 +1039,12 @@ async function collectGolden(page) {
           let overlaps = 0; for (let i = 0; i < items.length; i++) for (let j = i + 1; j < items.length; j++) if (ov(items[i], items[j])) overlaps++;
           const bc = r(document.querySelector('.buttons-container'));
           const outside = [...document.querySelectorAll('.buttons-container button')].filter(b => r(b).right > bc.right + 1 || r(b).left < bc.left - 1).length;
-          return { w, overlaps, outside, plotH: Math.round(plotState.chart.plotHeight) };
+          const bw = [...document.querySelectorAll('.buttons-container button')].map(b => Math.round(r(b).width)); return { w, overlaps, outside, even: Math.max(...bw) - Math.min(...bw) <= 2, plotH: Math.round(plotState.chart.plotHeight) };
         }, w));
         await p.close();
       }
       check('1024–1920 px: header tabs, Copy link and chart controls never overlap', rows.every(r => r.overlaps === 0), JSON.stringify(rows.map(r => [r.w, r.overlaps])));
-      check('1024–1920 px: sidebar buttons stay inside the sidebar', rows.every(r => r.outside === 0), JSON.stringify(rows.map(r => [r.w, r.outside])));
+      check('1024–1920 px: sidebar buttons stay inside the sidebar, all the same width', rows.every(r => r.outside === 0 && r.even), JSON.stringify(rows.map(r => [r.w, r.outside, r.even])));
       check('1024–1920 px: the chart\'s plot area is at least 220 px tall', rows.every(r => r.plotH >= 220), JSON.stringify(rows.map(r => [r.w, r.plotH])));
     }
 

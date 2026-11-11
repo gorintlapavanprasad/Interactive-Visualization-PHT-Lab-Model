@@ -4011,3 +4011,13 @@ ul li {
 .insights-list li {
     margin: 0
 }
+
+/* Sidebar buttons: Import fills its column like the others; room above the row */
+.buttons-container .import-wrapper,
+.buttons-container .import-wrapper .button {
+    width: 100% !important
+}
+
+.buttons-container {
+    margin-top: 10px
+}

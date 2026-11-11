@@ -202,14 +202,15 @@ infrastructure, **P3** = nice to have.
 | T7 | P1 | ✅ **Done** (section 16): Cards/Table views, sortable columns, sort controls, page size, column chooser | — |
 | T8 | P1 | ✅ **Done** (section 17): Gaps tab, a heatmap of any two dimensions with gaps highlighted | — |
 | T9 | P2 | ✅ **Done** (section 12): no requests to other servers | Works with network off |
-| T10 | P2 | ✅ Automated part done (0 axe violations; reflow at 400% zoom; see section 8). Tour updated to cover the new features (section 22). Remaining: sessions with real screen-reader users | Signed off by disabled testers |
+| T10 | P2 | ✅ Automated part done: one persona per issue (#17–#25, section 24), with 0 axe violations in light and dark themes. Remaining (#33): sessions with real disabled users | Signed off by disabled testers |
 | T11 | P2 | ✅ **Done** (section 13): GitHub Actions runs lint, the data audit, 102 unit tests and 171 browser checks on every push and pull request (sections 19–24) | CI green on every push |
 | T12 | P2 | ✅ **Done** (section 18): 10 focused script files, ESLint in CI, jQuery 3.7.1, grids from config | — |
 | T13 | P2 | ✅ Mostly done (section 14): unused files and dead code removed, README added. Remaining (owner's decisions): choose a project LICENSE, confirm the Highcharts licence, archive the old DataSpectra repo | — |
 | T14 | P2 | ✅ **Done.** Live on GitHub Pages | Public URL |
 | T15 | P3 | ✅ **Done** (section 20): shareable links + Copy link; CSV and BibTeX downloads. "At a glance" summary added (#27) | — |
 
-**Suggested order:** T1 (put the fixes live) → T2/T3 → T4 → T9 → T11 → T6–T8 → the rest.
+**From 2026-11-11 the task list lives in GitHub issues and milestones** (section 24). Open work:
+the owner decisions in milestone M4 (#28–#33).
 
 ## 8. Speed and accessibility testing (2026-11-09)
 
@@ -1015,3 +1016,20 @@ with every filter and hides when nothing matches. It is a plain list, not a live
 talks over the result-count announcement.
 
 3 new checks compare it with counts computed independently from the data, with and without a filter.
+
+## 25. Regression testing (2026-11-11)
+
+After #17–#27, a full regression pass:
+- **The whole suite three times in a row:** lint, data audit, 102 unit tests and 171 browser checks.
+  273/273 every time, so no test is flaky.
+- **The older persona report** (`node tools/a11y-persona-test.js <url>`): 0 axe violations, 0 load
+  errors, filtering in about 80–110 ms. Its screenshot at 200% zoom with deuteranopia showed the
+  sidebar buttons at uneven widths. Fixed, and covered by a check.
+- **The same 171 browser checks against the live site:**
+  ```bash
+  BASE_URL=https://gorintlapavanprasad.github.io/Interactive-Visualization-PHT-Lab-Model/ node tools/ci-test.js
+  ```
+- **10 simultaneous users on the live site**, each searching, filtering, switching tabs and toggling
+  patterns: every user got the same results, with no errors and no requests to outside servers.
+- **Clean-up:** the unused "No Data" picture was removed. There are still no Claude/Anthropic mentions
+  in files or commits.

@@ -163,6 +163,7 @@ function displaySpectrum() {
             }
         })
     });
+    document.querySelectorAll('.spectrumTable').forEach(t => enableRovingCells(t, 'td[data-column][role=button]'));
     updateSpectrumLegends()
 }
 
@@ -200,7 +201,7 @@ function initGridTooltip() {
     const show = (cell) => {
         if (!cell.hasAttribute('data-label')) return;
         const n = cell.getAttribute('data-count') || 0;
-        tip.innerHTML = `<strong>${escapeHtml(cell.getAttribute('data-label'))}</strong><br>${n} of ${filteredDataTmp.length} studies (${cell.getAttribute('data-pct')}%)${n > 0 ? '<br><em>Click or press Enter to list them</em>' : ''}`;
+        tip.innerHTML = `<strong>${escapeHtml(cell.getAttribute('data-label'))}</strong><br>${n} of ${filteredDataTmp.length} studies (${cell.getAttribute('data-pct')}%)${n > 0 ? '<br><em>Click or press Enter to list them. Arrow keys move between cells.</em>' : ''}`;
         tip.hidden = !1;
         const r = cell.getBoundingClientRect();
         const top = r.top + window.scrollY - tip.offsetHeight - 8;

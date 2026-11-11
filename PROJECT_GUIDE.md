@@ -203,7 +203,7 @@ infrastructure, **P3** = nice to have.
 | T8 | P1 | ✅ **Done** (section 17): Gaps tab, a heatmap of any two dimensions with gaps highlighted | — |
 | T9 | P2 | ✅ **Done** (section 12): no requests to other servers | Works with network off |
 | T10 | P2 | ✅ Automated part done (0 axe violations; reflow at 400% zoom; see section 8). Tour updated to cover the new features (section 22). Remaining: sessions with real screen-reader users | Signed off by disabled testers |
-| T11 | P2 | ✅ **Done** (section 13): GitHub Actions runs lint, the data audit, 102 unit tests and 137 browser checks on every push and pull request (sections 19–24) | CI green on every push |
+| T11 | P2 | ✅ **Done** (section 13): GitHub Actions runs lint, the data audit, 102 unit tests and 143 browser checks on every push and pull request (sections 19–24) | CI green on every push |
 | T12 | P2 | ✅ **Done** (section 18): 10 focused script files, ESLint in CI, jQuery 3.7.1, grids from config | — |
 | T13 | P2 | ✅ Mostly done (section 14): unused files and dead code removed, README added. Remaining (owner's decisions): choose a project LICENSE, confirm the Highcharts licence, archive the old DataSpectra repo | — |
 | T14 | P2 | ✅ **Done.** Live on GitHub Pages | Public URL |
@@ -882,3 +882,18 @@ and achromatopsia simulation (Machado 2009). The smallest CIELAB difference betw
 - The Reset/Import/Export/Redraw buttons overflowed a narrow sidebar. They now wrap.
 
 9 new checks, including overlaps, buttons and plot height at 1024, 1280, 1366, 1440 and 1920 px.
+
+### #20: Motor-impaired / keyboard-only user
+
+6 new checks: Tab through every view with no traps; a visible focus ring on every stop; focus never
+hidden behind other content; every control at least 24 x 24 px on every view; legend toggles by keyboard;
+one Tab stop per grid, with arrow-key movement.
+
+Fixes:
+- **Far fewer key presses.** The Ratings and Spectrum grids had 48 Tab stops and the Gaps table about 80.
+  Each is now one Tab stop, and the arrow keys move between cells (Home/End, Ctrl+Home/End too).
+  Tab returns to the last cell used. Tab stops per view: Ratings and Spectrum 67 → 22, Gaps 106 → 26.
+  The hint is in the grid tooltip, on the Gaps tab, and is read to screen readers.
+- **Targets of at least 24 px:** the patterns, "hide N/A" and column-chooser checkboxes, the intensity
+  sliders, the DOI links on cards, the title buttons in the table, and the chart's "play as sound" /
+  "data table" buttons.

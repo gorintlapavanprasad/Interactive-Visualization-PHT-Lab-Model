@@ -98,3 +98,59 @@ function cssColorToRgb(color) {
     return m.slice(0, 3).map(Number)
 }
 
+
+// ---- One Tab stop per table of cells (#20) --------------------------------
+// Grids and the gap table have dozens of clickable cells. Instead of a Tab stop
+// for each, the table gets one stop and the arrow keys move between cells
+// (Home/End: row start/end; Ctrl+Home/End: first/last cell). The last cell
+// used keeps the stop, so Tab returns to it.
+function enableRovingCells(table, cellSelector) {
+    if (!table) return;
+    const cells = () => [...table.querySelectorAll(cellSelector)].filter(c => c.getAttribute('tabindex') !== null || c.tagName === 'BUTTON');
+    const list = cells();
+    if (!list.length) return;
+    const current = list.find(c => c.dataset.rovingStop === '1') || list[0];
+    list.forEach(c => { c.setAttribute('tabindex', c === current ? '0' : '-1'); c.dataset.rovingStop = c === current ? '1' : '' });
+    if (!table.dataset.rovingHint) {
+        table.dataset.rovingHint = '1';
+        const hint = document.createElement('p');
+        hint.className = 'sr-only';
+        hint.id = (table.id || ('roving-' + Math.random().toString(36).slice(2, 8))) + '-keys';
+        hint.textContent = 'Use the arrow keys to move between cells; Enter lists the studies.';
+        table.insertAdjacentElement('beforebegin', hint);
+        table.setAttribute('aria-describedby', hint.id)
+    }
+    if (table.dataset.rovingBound) return;
+    table.dataset.rovingBound = '1';
+    const pos = c => { const td = c.closest('td,th'); return { row: td.parentElement.rowIndex ?? [...td.parentElement.parentElement.children].indexOf(td.parentElement), col: td.cellIndex } };
+    const moveTo = (from, to) => {
+        if (!to) return;
+        from.setAttribute('tabindex', '-1'); from.dataset.rovingStop = '';
+        to.setAttribute('tabindex', '0'); to.dataset.rovingStop = '1';
+        to.focus()
+    };
+    table.addEventListener('focusin', e => {
+        const c = e.target.closest(cellSelector);
+        if (!c || !table.contains(c)) return;
+        cells().forEach(x => { const on = x === c; x.setAttribute('tabindex', on ? '0' : '-1'); x.dataset.rovingStop = on ? '1' : '' })
+    });
+    table.addEventListener('keydown', e => {
+        const c = e.target.closest(cellSelector);
+        if (!c || !table.contains(c)) return;
+        const all = cells().map(x => ({ x, ...pos(x) }));
+        const me = pos(c);
+        const rows = [...new Set(all.map(a => a.row))].sort((a, b) => a - b);
+        const inRow = r => all.filter(a => a.row === r).sort((a, b) => a.col - b.col);
+        const nearest = (r) => { const rr = inRow(r); return rr.length ? rr.reduce((best, a) => Math.abs(a.col - me.col) < Math.abs(best.col - me.col) ? a : best).x : null };
+        let target = null;
+        if (e.key === 'ArrowRight') target = inRow(me.row).find(a => a.col > me.col)?.x;
+        else if (e.key === 'ArrowLeft') target = inRow(me.row).reverse().find(a => a.col < me.col)?.x;
+        else if (e.key === 'ArrowDown') { const r = rows.find(r => r > me.row); target = r !== undefined ? nearest(r) : null }
+        else if (e.key === 'ArrowUp') { const r = [...rows].reverse().find(r => r < me.row); target = r !== undefined ? nearest(r) : null }
+        else if (e.key === 'Home') target = e.ctrlKey ? all.sort((a, b) => a.row - b.row || a.col - b.col)[0].x : inRow(me.row)[0].x;
+        else if (e.key === 'End') { if (e.ctrlKey) { const s = all.sort((a, b) => a.row - b.row || a.col - b.col); target = s[s.length - 1].x } else { const rr = inRow(me.row); target = rr[rr.length - 1].x } }
+        else return;
+        e.preventDefault();
+        moveTo(c, target)
+    })
+}

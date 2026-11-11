@@ -1046,6 +1046,100 @@ async function collectGolden(page) {
       check('1024–1920 px: the chart\'s plot area is at least 220 px tall', rows.every(r => r.plotH >= 220), JSON.stringify(rows.map(r => [r.w, r.plotH])));
     }
 
+    // ------------------------------ persona: motor / keyboard-only user (#20) ----
+    console.log('\npersona: motor / keyboard-only user (#20)');
+    {
+      const p = await browser.newPage();
+      await p.setViewport({ width: 1440, height: 900 });
+      await p.evaluateOnNewDocument(() => localStorage.setItem('pht_lab_tour_seen', 'true'));
+      await p.goto(base, { waitUntil: 'networkidle0' });
+      await p.waitForFunction(() => window.plotState && plotState.chart);
+      const VIEWS = [['Show-plot'], ['Show-data', 'cards'], ['Show-data', 'table'], ['ratings-grid'], ['Show-grid'], ['Show-gaps']];
+      const tabRes = [];
+      for (const [tab, dv] of VIEWS) {
+        await p.evaluate(async (tab, dv) => {
+          $(`#myTab .item[data-tab="${tab}"]`).trigger('click'); await new Promise(r => setTimeout(r, 400));
+          if (dv) { document.querySelector(`.view-toggle [data-view="${dv}"]`).click(); await new Promise(r => setTimeout(r, 300)) }
+          document.querySelector('.skip-link').focus();
+        }, tab, dv);
+        const r = { view: tab + (dv ? '/' + dv : ''), stops: 0, wrapped: false, noRing: [], obscured: [] };
+        for (let i = 0; i < 150; i++) {
+          await p.keyboard.press('Tab');
+          await sleep(20);
+          const info = await p.evaluate(() => {
+            const e = document.activeElement; if (!e || e === document.body) return { body: true };
+            if (e.classList.contains('skip-link')) return { skip: true };
+            if (e.closest('.highcharts-container') || e.id.startsWith('highcharts-')) return { chart: true };
+            // a visually hidden checkbox shows its focus on the styled sibling (theme switch)
+            const shown = (getComputedStyle(e).opacity === '0' || e.getBoundingClientRect().width === 0) && e.nextElementSibling ? e.nextElementSibling : e;
+            const cs = getComputedStyle(shown);
+            const ring = (cs.outlineStyle !== 'none' && parseFloat(cs.outlineWidth) >= 2) || (cs.boxShadow && cs.boxShadow !== 'none');
+            const r = shown.getBoundingClientRect();
+            const cx = Math.min(innerWidth - 1, Math.max(0, r.left + r.width / 2)), cy = Math.min(innerHeight - 1, Math.max(0, r.top + r.height / 2));
+            const top = document.elementFromPoint(cx, cy);
+            const obscured = !!top && !(shown === top || shown.contains(top) || top.contains(shown) || top === e);
+            return { name: (e.id || e.className || e.tagName).toString().slice(0, 30), ring, obscured };
+          });
+          if (info.skip) { r.wrapped = true; break }
+          if (info.body || info.chart) continue;
+          r.stops++;
+          if (!info.ring) r.noRing.push(info.name);
+          if (info.obscured) r.obscured.push(info.name);
+        }
+        tabRes.push(r);
+      }
+      check('Tab goes through every view and comes back to the top (no keyboard traps)', tabRes.every(r => r.wrapped), JSON.stringify(tabRes.map(r => [r.view, r.stops, r.wrapped])));
+      check('every keyboard stop shows a visible focus ring (2.4.7)', tabRes.every(r => !r.noRing.length), tabRes.filter(r => r.noRing.length).map(r => r.view + ': ' + [...new Set(r.noRing)].slice(0, 4).join(', ')).join(' | '));
+      check('focused controls are never hidden behind other content (2.4.11)', tabRes.every(r => !r.obscured.length), tabRes.filter(r => r.obscured.length).map(r => r.view + ': ' + [...new Set(r.obscured)].slice(0, 4).join(', ')).join(' | '));
+      const small = await p.evaluate(async VIEWS => {
+        const out = [];
+        for (const [tab, dv] of VIEWS) {
+          $(`#myTab .item[data-tab="${tab}"]`).trigger('click'); await new Promise(r => setTimeout(r, 300));
+          if (dv) { document.querySelector(`.view-toggle [data-view="${dv}"]`).click(); await new Promise(r => setTimeout(r, 200)) }
+          document.querySelectorAll('a[href], button, input:not([type=hidden]), select, [role=button], [tabindex="0"], summary').forEach(e => {
+            if (e.closest('.sr-only, [inert], .highcharts-container, .menu, .hover-nav-menu') || e.classList.contains('skip-link') || e.id.startsWith('highcharts-end-of-chart')) return;
+            const r = e.getBoundingClientRect(); if (!r.width || !r.height) return;
+            if (getComputedStyle(e).display === 'inline' || getComputedStyle(e).opacity === '0') return;
+            if (r.width < 24 || r.height < 24) out.push(`${tab}${dv ? '/' + dv : ''}: ${(e.id || e.className || e.tagName).toString().slice(0, 25)} ${Math.round(r.width)}x${Math.round(r.height)}`);
+          });
+        }
+        return [...new Set(out)];
+      }, VIEWS);
+      check('every control is at least 24 x 24 px (2.5.8), on every view', small.length === 0, small.slice(0, 5).join(' | '));
+      // legend toggles work from the keyboard
+      const legend = await p.evaluate(async () => {
+        $('#myTab .item[data-tab="Show-plot"]').trigger('click'); await new Promise(r => setTimeout(r, 400));
+        const proxy = document.querySelector('.highcharts-a11y-proxy-element[aria-label^="Show "]');
+        if (!proxy) return { found: false };
+        proxy.focus(); proxy.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', keyCode: 13, bubbles: true }));
+        proxy.click(); await new Promise(r => setTimeout(r, 300));
+        const hidden = plotState.chart.series.filter(s => !s.visible).length;
+        plotState.chart.series.forEach(s => s.setVisible(true, false)); plotState.chart.redraw();
+        return { found: true, hidden };
+      });
+      check('chart legend items can be toggled from the keyboard', legend.found && legend.hidden === 1, JSON.stringify(legend));
+      // grids and the gap table: one Tab stop each, arrow keys inside
+      const rov = {};
+      for (const [tab, sel, cell] of [['Show-grid', '#Show-grid-pane .spectrumTable', 'td[data-column][role=button]'], ['Show-gaps', '#gapTable', '.gap-cell']]) {
+        await p.evaluate(async tab => { $(`#myTab .item[data-tab="${tab}"]`).trigger('click'); await new Promise(r => setTimeout(r, 500)) }, tab);
+        const stops = await p.evaluate((sel, cell) => document.querySelector(sel).querySelectorAll(cell + '[tabindex="0"]').length, sel, cell);
+        await p.evaluate((sel, cell) => document.querySelector(sel).querySelector(cell + '[tabindex="0"]').focus(), sel, cell);
+        const where = () => p.evaluate(() => { const td = document.activeElement.closest('td'); return td ? [td.parentElement.rowIndex, td.cellIndex] : null });
+        const start = await where();
+        await p.keyboard.press('ArrowRight'); const right = await where();
+        await p.keyboard.press('ArrowDown'); const down = await where();
+        await p.keyboard.press('ArrowLeft'); const left = await where();
+        const stopsAfter = await p.evaluate((sel, cell) => document.querySelector(sel).querySelectorAll(cell + '[tabindex="0"]').length, sel, cell);
+        await p.keyboard.press('Enter'); await sleep(700);
+        const opened = await p.evaluate(() => !!document.querySelector('#spectrumData.visible, #spectrumData.active'));
+        await p.keyboard.press('Escape'); await sleep(600);
+        rov[tab] = { stops, start, right, down, left, stopsAfter, opened };
+      }
+      const ok = r => !!(r.start && r.right && r.down && r.left) && r.stops === 1 && r.stopsAfter === 1 && r.right[0] === r.start[0] && r.right[1] > r.start[1] && r.down[0] > r.right[0] && r.left[1] < r.down[1] && r.opened;
+      check('Spectrum grid and gap table: one Tab stop each; arrow keys move between cells; Enter lists studies', ok(rov['Show-grid']) && ok(rov['Show-gaps']), JSON.stringify(rov));
+      await p.close();
+    }
+
     console.log('\naccessibility');
     const a11y = await openPage(browser, base);
     const violations = {};

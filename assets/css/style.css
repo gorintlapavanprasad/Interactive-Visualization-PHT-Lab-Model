@@ -3854,3 +3854,52 @@ ul li {
     width: auto !important;
     margin: 0 !important
 }
+
+/* Motor / keyboard users (#20): every control is at least 24 x 24 px (WCAG 2.5.8) */
+#plotPatterns,
+#gapHideNA,
+.chart-control.chart-check input {
+    width: 24px;
+    height: 24px;
+    flex: 0 0 24px
+}
+
+.spectrumIntensity {
+    height: 24px
+}
+
+.secondUI .spanRight a,
+.card-actions .open-paper {
+    display: inline-block;
+    min-height: 24px;
+    line-height: 24px
+}
+
+.link-button {
+    min-height: 24px
+}
+
+.simple-pagination li a,
+.simple-pagination li span {
+    min-width: 24px;
+    min-height: 24px
+}
+
+.column-chooser input[type=checkbox] {
+    width: 24px;
+    height: 24px;
+    flex: 0 0 24px
+}
+
+/* Highcharts' "Play as sound" / "View as data table" buttons (shown on focus) */
+[id^="highcharts-a11y-sonify-data-btn"],
+[id^="hc-linkto-highcharts-data-table"] {
+    padding: 2px 4px !important;
+    min-height: 24px !important
+}
+
+.gap-keys-hint {
+    font-size: .85rem;
+    color: var(--ds-text-secondary);
+    margin: 0 0 8px
+}

@@ -118,6 +118,7 @@ function renderGaps() {
     }).join('');
     const footer = `<tr class="gap-total-row"><th scope="row">All</th>${cols.map(b => `<td class="gap-total">${colSets.get(b)?.size || 0}</td>`).join('')}<td class="gap-total">${all.size}</td></tr>`;
     table.querySelector('tbody').innerHTML = bodyHtml + footer;
+    enableRovingCells(table, '.gap-cell');
     const combos = rows.length * cols.length;
     table.querySelector('caption').textContent = `${rLabel} by ${cLabel}: number of studies${mode === 'row' ? ' (as % of each row)' : ''}. ${all.size} studies.`;
     const filtered = filteredDataTmp.length < csvData.length ? ' with the current filters' : '';

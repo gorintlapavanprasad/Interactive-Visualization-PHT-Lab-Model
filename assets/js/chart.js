@@ -192,15 +192,18 @@ function Drawplot(PlotFilter) {
         },
         accessibility: {
             enabled: !0,
+            // One landmark for the chart, not one per series and legend (#17).
+            landmarkVerbosity: 'one',
             keyboardNavigation: {
                 enabled: !0,
                 seriesNavigation: {
                     rememberPointFocus: !0
                 }
             },
+            // Off: it interrupted (assertive) the "N of 216 studies match"
+            // announcement on every filter change and tab switch (#17).
             announceNewData: {
-                enabled: !0,
-                interruptUser: !0
+                enabled: !1
             },
             sonification: {
                 enabled: true,

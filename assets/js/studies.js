@@ -118,8 +118,13 @@ function buildStudyCard(row) {
         highlightInto(span2, value);
         if (["Title", "Study ID"].includes(key)) {
             divInner.classList.add("clickable-row", "selectable");
-            divInner.setAttribute("tabindex", "0");
-            divInner.setAttribute("role", "button");
+            // One keyboard stop per study: the Title row (Study ID only when there
+            // is no title). Both rows stay clickable with the mouse (#17).
+            const isStop = key === "Title" || !String(row.Title ?? "").trim();
+            if (isStop) {
+                divInner.setAttribute("tabindex", "0");
+                divInner.setAttribute("role", "button");
+            }
             // Unique, descriptive name (was "View details for Title" on every card).
             const handler = (e) => {
                 if (e.type === 'click' || e.key === 'Enter' || e.key === ' ') {
@@ -131,8 +136,13 @@ function buildStudyCard(row) {
             divInner.addEventListener('keydown', handler)
         }
         divInner.appendChild(span1);
+        // Spoken separator so names read "Title: A system…", not "TitleA system…"
+        const sep = document.createElement("span");
+        sep.className = "sr-only";
+        sep.textContent = ": ";
+        divInner.appendChild(sep);
         divInner.appendChild(span2);
-        if (divInner.classList.contains("clickable-row")) {
+        if (divInner.getAttribute("role") === "button") {
             const hint = document.createElement("span");
             hint.className = "sr-only";
             hint.textContent = " (open study details)";

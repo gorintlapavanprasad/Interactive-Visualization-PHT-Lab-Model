@@ -573,12 +573,17 @@ async function collectGolden(page) {
 
     console.log('\nkeyboard, theme and tour');
     // skip link moves focus to the main content
-    await page.evaluate(() => document.activeElement && document.activeElement.blur());
-    await page.keyboard.press('Tab');
+    // (Chrome resumes Tab from the last focus point, so check "first in tab order" directly)
+    const skipFirst = await page.evaluate(() => {
+      const f = [...document.querySelectorAll('a[href],button,input,select,textarea,[tabindex]')]
+        .filter(e => e.tabIndex >= 0 && !e.disabled && !e.closest('[inert],[hidden]'));
+      f[0].focus();
+      return f[0].classList.contains('skip-link');
+    });
     await page.keyboard.press('Enter');
     await sleep(200);
     const skip = await page.evaluate(() => document.activeElement.id);
-    check('skip link moves focus to the main content', skip === 'main-content', skip);
+    check('skip link is first in tab order and moves focus to the main content', skipFirst && skip === 'main-content', `${skipFirst} ${skip}`);
     // tab keyboard: ArrowRight / End / Home, roving tabindex
     await page.focus('#Show-plot');
     await page.keyboard.press('ArrowRight'); await sleep(250);
@@ -803,6 +808,69 @@ async function collectGolden(page) {
       check('using every feature causes no CSP violations', afterUse.length === 0 && consoleAfterUse.length === 0, afterUse.concat(consoleAfterUse).slice(0, 3).join(' | '));
       check('injected inline script is blocked by the policy', blocked.injectedRan === 0 && blocked.violationsSeen > 0, JSON.stringify(blocked));
       check('eval is blocked by the policy', blocked.evalBlocked, JSON.stringify(blocked));
+      await p.close();
+    }
+
+    // ------------------------------- persona: blind screen-reader user (#17) ----
+    console.log('\npersona: blind screen-reader user (#17)');
+    {
+      const p = await browser.newPage();
+      await p.setViewport({ width: 1440, height: 900 });
+      await p.evaluateOnNewDocument(() => localStorage.setItem('pht_lab_tour_seen', 'true'));
+      await p.goto(base, { waitUntil: 'networkidle0' });
+      await p.waitForFunction(() => window.plotState && plotState.chart);
+      const r = await p.evaluate(async () => {
+        const wait = ms => new Promise(res => setTimeout(res, ms));
+        const vis = e => !!(e.offsetWidth || e.offsetHeight || e.getClientRects().length);
+        const out = {};
+        // page structure
+        const hs = [...document.querySelectorAll('h1,h2,h3,h4,h5,h6')].filter(vis).map(h => +h.tagName[1]);
+        out.h1 = hs.filter(l => l === 1).length;
+        out.skips = hs.filter((l, i) => i && l > hs[i - 1] + 1).length;
+        out.mains = document.querySelectorAll('main,[role=main]').length;
+        out.chartRegions = document.querySelectorAll('#plotIt [role=region], #plotIt section[aria-label], #plotIt [role=region][aria-label]').length;
+        // nothing interrupts (assertive) while filtering and switching tabs
+        // (a MutationObserver: chart announcements can arrive seconds later and clear quickly)
+        const assertive = new Set();
+        const watch = () => document.querySelectorAll('[aria-live=assertive]').forEach(e => { const t = e.textContent.trim(); if (t) assertive.add(t.slice(0, 80)) });
+        await wait(5500); // let the load-time announcement window pass
+        document.querySelectorAll('[aria-live=assertive]').forEach(e => { e.textContent = '' });
+        const mo = new MutationObserver(watch);
+        mo.observe(document.body, { subtree: true, childList: true, characterData: true });
+        const gs = document.getElementById('globalSearch');
+        gs.value = 'autism'; gs.dispatchEvent(new Event('input', { bubbles: true }));
+        for (let i = 0; i < 10; i++) { await wait(120); watch() }
+        out.polite = document.getElementById('sr-announcer').textContent.trim();
+        $('#myTab .item[data-tab="Show-data"]').trigger('click');
+        for (let i = 0; i < 5; i++) { await wait(120); watch() }
+        out.tabSaid = document.getElementById('sr-announcer').textContent.trim();
+        $('#myTab .item[data-tab="Show-plot"]').trigger('click');
+        await wait(6000); watch(); mo.disconnect();
+        out.assertive = [...assertive];
+        document.querySelector('[data-action=reset]').click(); await wait(300);
+        // study cards: one details stop per study, readable name
+        $('#myTab .item[data-tab="Show-data"]').trigger('click'); await wait(300);
+        document.querySelector(".view-toggle [data-view=\"cards\"]").click(); await wait(400);
+        const cards = [...document.querySelectorAll('#Show-data-pane [data-uid]')].filter(vis);
+        out.cards = cards.length;
+        out.stopsPerCard = [...new Set(cards.map(c => c.querySelectorAll('.clickable-row[tabindex="0"][role=button]').length))];
+        const btn = cards[0].querySelector('.clickable-row[role=button]');
+        out.btnText = btn.textContent.replace(/\s+/g, ' ').trim().slice(0, 60);
+        // details dialog: focus in, named, modal; Escape returns focus
+        btn.focus(); btn.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); await wait(800);
+        const m = document.querySelector('#studyAbstractModal');
+        out.dialog = { role: m.getAttribute('role'), modal: m.getAttribute('aria-modal'), named: !!document.getElementById(m.getAttribute('aria-labelledby') || 'x')?.textContent.trim(), focusIn: !!document.activeElement.closest('#studyAbstractModal') };
+        document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', keyCode: 27, bubbles: true })); await wait(800);
+        out.dialog.focusBack = document.activeElement === btn;
+        return out;
+      });
+      check('one h1 and no skipped heading levels', r.h1 === 1 && r.skips === 0, `h1=${r.h1}, skips=${r.skips}`);
+      check('one main landmark; the chart adds at most one region', r.mains === 1 && r.chartRegions <= 1, `main=${r.mains}, chart regions=${r.chartRegions}`);
+      check('filtering and switching tabs never interrupt (no assertive announcements)', r.assertive.length === 0, r.assertive.join(' | '));
+      check('result count and tab changes are announced politely', /\d+ of 216 studies match/.test(r.polite) && /Data active/.test(r.tabSaid), `"${r.polite}" / "${r.tabSaid}"`);
+      check('each study card has exactly one "open details" keyboard stop', r.cards > 0 && r.stopsPerCard.length === 1 && r.stopsPerCard[0] === 1, `${r.cards} cards, stops per card ${r.stopsPerCard}`);
+      check('study button reads "Title: …" (field and value separated)', /^Title: \S/.test(r.btnText), r.btnText);
+      check('study details: named modal dialog, focus moves in and returns on Escape', r.dialog.role === 'dialog' && r.dialog.modal === 'true' && r.dialog.named && r.dialog.focusIn && r.dialog.focusBack, JSON.stringify(r.dialog));
       await p.close();
     }
 

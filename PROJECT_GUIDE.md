@@ -203,7 +203,7 @@ infrastructure, **P3** = nice to have.
 | T8 | P1 | ✅ **Done** (section 17): Gaps tab, a heatmap of any two dimensions with gaps highlighted | — |
 | T9 | P2 | ✅ **Done** (section 12): no requests to other servers | Works with network off |
 | T10 | P2 | ✅ Automated part done (0 axe violations; reflow at 400% zoom; see section 8). Tour updated to cover the new features (section 22). Remaining: sessions with real screen-reader users | Signed off by disabled testers |
-| T11 | P2 | ✅ **Done** (section 13): GitHub Actions runs lint, the data audit, 102 unit tests and 160 browser checks on every push and pull request (sections 19–24) | CI green on every push |
+| T11 | P2 | ✅ **Done** (section 13): GitHub Actions runs lint, the data audit, 102 unit tests and 165 browser checks on every push and pull request (sections 19–24) | CI green on every push |
 | T12 | P2 | ✅ **Done** (section 18): 10 focused script files, ESLint in CI, jQuery 3.7.1, grids from config | — |
 | T13 | P2 | ✅ Mostly done (section 14): unused files and dead code removed, README added. Remaining (owner's decisions): choose a project LICENSE, confirm the Highcharts licence, archive the old DataSpectra repo | — |
 | T14 | P2 | ✅ **Done.** Live on GitHub Pages | Public URL |
@@ -968,3 +968,19 @@ Fixes:
   also caps animations at one run, so nothing can loop quickly.
 
 There is no flashing content. The only keyframe animation is a one-off 0.2 s fade-in.
+
+### #25: Older adult with combined impairments
+
+5 new checks run one real task, end to end, as one person:
+- **Setup:** 200% zoom on a 1280 x 800 laptop (640 x 400 CSS px), patterns on for colour blindness,
+  keyboard only.
+- **Steps (real key presses):**
+  1. Type "blind" in the search box and "2016-2023" in the year box.
+  2. Confirm 44 studies, all 2016–2023, and that the count is announced.
+  3. Arrow to the Data tab and open the first study.
+  4. Escape, and confirm focus returns to it.
+  5. Tab to Copy link and press Enter. Confirm the "copied" message, and that the link keeps the search
+     and the years.
+- **Throughout:** no sideways scrolling, and the patterns stay on.
+
+Everything passed using the fixes from #17–#24. Nothing new was needed.

@@ -1343,6 +1343,52 @@ async function collectGolden(page) {
       await p.close();
     }
 
+    // ------------------------ persona: older adult, combined impairments (#25) ----
+    console.log('\npersona: older adult with combined impairments (#25)');
+    {
+      // 200% zoom on a 1280 x 800 laptop = 640 x 400 CSS px; keyboard only; patterns on
+      const p = await browser.newPage();
+      await p.setViewport({ width: 640, height: 400, deviceScaleFactor: 2 });
+      await p.evaluateOnNewDocument(() => { localStorage.setItem('pht_lab_tour_seen', 'true'); localStorage.setItem('pht_lab_patterns', 'on') });
+      const ctx = browser.defaultBrowserContext();
+      await ctx.overridePermissions(base.replace(/\/$/, ''), ['clipboard-read', 'clipboard-write', 'clipboard-sanitized-write']).catch(() => {});
+      await p.goto(base, { waitUntil: 'networkidle0' });
+      await p.waitForFunction(() => window.plotState && plotState.chart);
+      const steps = [];
+      const active = () => p.evaluate(() => { const e = document.activeElement; return { id: e.id, cls: String(e.className), text: (e.textContent || '').trim().slice(0, 40), tab: e.getAttribute('data-tab') } });
+      // Tab forward until a matching control has focus (at most n presses)
+      const tabTo = async (test, n = 80) => { for (let i = 0; i < n; i++) { await p.keyboard.press('Tab'); await sleep(15); if (test(await active())) return i + 1 } return -1 };
+      await p.evaluate(() => document.querySelector('.skip-link').focus());
+      // 1. search for blind-player games
+      let n = await tabTo(a => a.id === 'globalSearch'); steps.push(['search box', n]);
+      await p.keyboard.type('blind', { delay: 20 });
+      // 2. year range 2016-2023
+      n = await tabTo(a => a.id === 'YearFilter'); steps.push(['year box', n]);
+      await p.keyboard.type('2016-2023', { delay: 20 }); await p.keyboard.press('Enter'); await sleep(1200);
+      const res = await p.evaluate(() => ({ n: filteredDataTmp.length, allYears: filteredDataTmp.every(r => +r.Year >= 2016 && +r.Year <= 2023), said: document.getElementById('sr-announcer').textContent, patterns: [...document.querySelectorAll('#plotIt .highcharts-point')].some(e => /^url\(/.test(e.getAttribute('fill') || '')) }));
+      // 3. go to the Data tab with the keyboard and open the first study
+      n = await tabTo(a => a.tab === 'Show-plot' || a.tab === 'Show-data'); steps.push(['tabs', n]);
+      for (let i = 0; i < 5; i++) { const a = await active(); if (a.tab === 'Show-data') break; await p.keyboard.press('ArrowRight'); await sleep(120) }
+      await p.keyboard.press('Enter'); await sleep(600);
+      n = await tabTo(a => /clickable-row|link-button/.test(a.cls)); steps.push(['first study', n]);
+      await p.keyboard.press('Enter'); await sleep(900);
+      const dialog = await p.evaluate(() => ({ open: !!document.querySelector('#studyAbstractModal.visible, #studyAbstractModal.active'), focusIn: !!document.activeElement.closest('#studyAbstractModal') }));
+      await p.keyboard.press('Escape'); await sleep(700);
+      const back = await p.evaluate(() => /clickable-row|link-button/.test(String(document.activeElement.className)));
+      // 4. copy a link to this view
+      n = await tabTo(a => a.id === 'copyLink', 150); steps.push(['copy link', n]);
+      await p.keyboard.press('Enter'); await sleep(600);
+      const shared = await p.evaluate(() => ({ label: document.getElementById('copyLink').textContent.replace(/\s+/g, ' ').trim(), hash: location.hash }));
+      // the whole time: no sideways scrolling, controls stay >= 24 px
+      const layout = await p.evaluate(() => ({ sideways: document.documentElement.scrollWidth > document.documentElement.clientWidth + 1 }));
+      check('200% zoom + keyboard only: search and year range reach the right studies', res.n > 0 && res.allYears && /\d+ of 216 studies match/.test(res.said), JSON.stringify({ ...res, steps }));
+      check('200% zoom + keyboard only: every control in the task is reachable with Tab', steps.every(([, k]) => k > 0), JSON.stringify(steps));
+      check('200% zoom + keyboard only: a study opens, then focus returns to it', dialog.open && dialog.focusIn && back, JSON.stringify({ ...dialog, back }));
+      check('200% zoom + keyboard only: Copy link confirms, and the link keeps the search and years', /copied/i.test(shared.label) && /q=blind/.test(shared.hash) && /yr=2016-2023/.test(shared.hash), JSON.stringify(shared));
+      check('200% zoom: patterns on (colour-blind setting kept) and no sideways scrolling', res.patterns && !layout.sideways, JSON.stringify({ patterns: res.patterns, ...layout }));
+      await p.close();
+    }
+
     console.log('\naccessibility');
     const a11y = await openPage(browser, base);
     const violations = {};

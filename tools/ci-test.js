@@ -1264,6 +1264,42 @@ async function collectGolden(page) {
       await p.close();
     }
 
+    // ------------------------------- persona: deaf / hard-of-hearing user (#23) ----
+    console.log('\npersona: deaf / hard-of-hearing user (#23)');
+    {
+      const p = await browser.newPage();
+      await p.setViewport({ width: 1440, height: 900 });
+      await p.evaluateOnNewDocument(() => {
+        localStorage.setItem('pht_lab_tour_seen', 'true');
+        // count media playback; chart sound is checked with Highcharts' own isPlaying()
+        // (its synth starts silent oscillators when it is set up, so counting starts misleads)
+        window.__audio = 0;
+        const pl = HTMLMediaElement.prototype.play; HTMLMediaElement.prototype.play = function () { window.__audio++; return pl.call(this) };
+      });
+      await p.goto(base, { waitUntil: 'networkidle0' });
+      await p.waitForFunction(() => window.plotState && plotState.chart);
+      const r = await p.evaluate(async () => {
+        const wait = ms => new Promise(res => setTimeout(res, ms));
+        let playing = 0;
+        const poll = setInterval(() => { const so = plotState.chart && plotState.chart.sonification; if (so && so.isPlaying && so.isPlaying()) playing++ }, 50);
+        const gs = document.getElementById('globalSearch');
+        gs.value = 'deaf'; gs.dispatchEvent(new Event('input', { bubbles: true })); await wait(800);
+        for (const t of ['Show-data', 'ratings-grid', 'Show-grid', 'Show-gaps', 'Show-plot']) { $(`#myTab .item[data-tab="${t}"]`).trigger('click'); await wait(250) }
+        document.getElementById('plotMode').value = 'percent'; document.getElementById('plotMode').dispatchEvent(new Event('change')); await wait(400);
+        document.querySelector('[data-action=reset]').click(); await wait(400);
+        const media = document.querySelectorAll('audio, video, [autoplay]').length;
+        // the "data table" alternative holds the same numbers the sound would play
+        const rows = document.querySelectorAll('#sr-table-body tr').length;
+        const sonifyBtn = [...document.querySelectorAll('#plotIt ~ * button, .highcharts-a11y-proxy-container button, [id^="highcharts-a11y-sonify-data-btn"]')].find(b => /sound|play/i.test(b.textContent + (b.getAttribute('aria-label') || '')));
+        clearInterval(poll);
+        return { audio: window.__audio + playing, media, rows, cats: plotState.chart.xAxis[0].categories.length, sonifyLabelled: !!sonifyBtn };
+      });
+      check('no sound plays on its own while loading, filtering and switching tabs or options', r.audio === 0, `${r.audio} samples with sound playing`);
+      check('no audio or video elements and nothing autoplays', r.media === 0);
+      check('everything the chart can play as sound is also in the data table', r.rows === r.cats && r.rows > 0, `${r.rows} table rows, ${r.cats} bars`);
+      await p.close();
+    }
+
     console.log('\naccessibility');
     const a11y = await openPage(browser, base);
     const violations = {};

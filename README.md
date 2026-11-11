@@ -66,7 +66,7 @@ updates the test values and runs the tests. Then commit `assets/js/data.js` and
 cd tools && npm ci && npm test
 ```
 
-Lint, the data audit, 102 unit tests and 168 browser checks (270 tests): filter counts, known results, accessibility, offline loading,
+Lint, the data audit, 102 unit tests and 171 browser checks (273 tests): filter counts, known results, accessibility, offline loading,
 page size and speed. They run automatically in GitHub Actions. Details are in `PROJECT_GUIDE.md` §13.
 
 ## Project layout

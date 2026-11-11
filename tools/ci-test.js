@@ -1434,6 +1434,51 @@ async function collectGolden(page) {
       await p.close();
     }
 
+    // ---------------------------------------------- "At a glance" summary (#27) ----
+    console.log('\n"At a glance" summary (#27)');
+    {
+      const p = await browser.newPage();
+      await p.setViewport({ width: 1440, height: 900 });
+      await p.evaluateOnNewDocument(() => localStorage.setItem('pht_lab_tour_seen', 'true'));
+      await p.goto(base, { waitUntil: 'networkidle0' });
+      await p.waitForFunction(() => window.plotState && plotState.chart);
+      const r = await p.evaluate(async () => {
+        const wait = ms => new Promise(res => setTimeout(res, ms));
+        const items = () => [...document.querySelectorAll('#insightsList li')].map(l => l.textContent);
+        // independent counts straight from the data (canon-matched, each study once per answer)
+        const count = (rows, col, label) => rows.filter(r => splitValues(r[col]).some(v => canon(v) === canon(label))).length;
+        const check1 = rows => {
+          const it = items();
+          const years = rows.map(r => +r.Year).filter(Boolean);
+          const perYear = {}; years.forEach(y => { perYear[y] = (perYear[y] || 0) + 1 });
+          const maxY = Math.max(...Object.values(perYear));
+          const m1 = it[0].match(/^(\d+) stud.*from (\d{4}) to (\d{4})\. Busiest year: (\d{4}) \((\d+)/);
+          const m2 = it[1].match(/^Most studied community: (.+) \((\d+) stud/);
+          const m3 = it[2].match(/^Most used method: (.+) \((\d+) stud/);
+          return {
+            total: !!m1 && +m1[1] === rows.length && +m1[2] === Math.min(...years) && +m1[3] === Math.max(...years) && perYear[m1[4]] === maxY && +m1[5] === maxY,
+            community: !!m2 && count(rows, 'Community of focus', m2[1]) === +m2[2],
+            method: !!m3 && count(rows, 'Study Method', m3[1]) === +m3[2],
+            text: it
+          };
+        };
+        const out = { all: check1(filteredDataTmp) };
+        const gs = document.getElementById('globalSearch');
+        gs.value = 'deaf'; gs.dispatchEvent(new Event('input', { bubbles: true })); await wait(900);
+        out.deaf = check1(filteredDataTmp);
+        gs.value = 'zzqxvnothing'; gs.dispatchEvent(new Event('input', { bubbles: true })); await wait(900);
+        out.hiddenWhenEmpty = document.querySelector('.insights').hidden;
+        document.querySelector('[data-action=reset]').click(); await wait(400);
+        out.backAfterReset = !document.querySelector('.insights').hidden && items()[0].startsWith(csvData.length + ' studies');
+        out.notLive = !document.querySelector('.insights').closest('[aria-live]');
+        return out;
+      });
+      check('"At a glance": totals, year range and busiest year match the data', r.all.total && r.deaf.total, JSON.stringify([r.all.text[0], r.deaf.text[0]]));
+      check('"At a glance": most studied community and method match independent counts', r.all.community && r.all.method && r.deaf.community && r.deaf.method, JSON.stringify([r.all.text.slice(1, 3), r.deaf.text.slice(1, 3)]));
+      check('"At a glance": follows the filters, hides when nothing matches, never talks over announcements', r.hiddenWhenEmpty && r.backAfterReset && r.notLive, JSON.stringify({ hidden: r.hiddenWhenEmpty, back: r.backAfterReset, notLive: r.notLive }));
+      await p.close();
+    }
+
     console.log('\naccessibility');
     const a11y = await openPage(browser, base);
     const violations = {};

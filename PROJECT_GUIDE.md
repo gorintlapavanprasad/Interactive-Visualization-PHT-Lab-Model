@@ -203,11 +203,11 @@ infrastructure, **P3** = nice to have.
 | T8 | P1 | ✅ **Done** (section 17): Gaps tab, a heatmap of any two dimensions with gaps highlighted | — |
 | T9 | P2 | ✅ **Done** (section 12): no requests to other servers | Works with network off |
 | T10 | P2 | ✅ Automated part done (0 axe violations; reflow at 400% zoom; see section 8). Tour updated to cover the new features (section 22). Remaining: sessions with real screen-reader users | Signed off by disabled testers |
-| T11 | P2 | ✅ **Done** (section 13): GitHub Actions runs lint, the data audit, 102 unit tests and 168 browser checks on every push and pull request (sections 19–24) | CI green on every push |
+| T11 | P2 | ✅ **Done** (section 13): GitHub Actions runs lint, the data audit, 102 unit tests and 171 browser checks on every push and pull request (sections 19–24) | CI green on every push |
 | T12 | P2 | ✅ **Done** (section 18): 10 focused script files, ESLint in CI, jQuery 3.7.1, grids from config | — |
 | T13 | P2 | ✅ Mostly done (section 14): unused files and dead code removed, README added. Remaining (owner's decisions): choose a project LICENSE, confirm the Highcharts licence, archive the old DataSpectra repo | — |
 | T14 | P2 | ✅ **Done.** Live on GitHub Pages | Public URL |
-| T15 | P3 | ✅ **Done** (section 20): shareable links + Copy link; CSV and BibTeX downloads. Remaining idea: an "insights" summary panel | — |
+| T15 | P3 | ✅ **Done** (section 20): shareable links + Copy link; CSV and BibTeX downloads. "At a glance" summary added (#27) | — |
 
 **Suggested order:** T1 (put the fixes live) → T2/T3 → T4 → T9 → T11 → T6–T8 → the rest.
 
@@ -1000,3 +1000,18 @@ notes)"**, a native `<details>` that works with the keyboard and is announced by
 - The box no longer needs its own scroll bar at 1280 x 720 or larger.
 
 3 new checks.
+
+### #27: "At a glance" summary
+
+The Plot tab opens with five short, plain sentences about the studies that match the current filters:
+- the number of studies, their year range and the busiest year
+- the most studied community
+- the most used method
+- the most used technology
+- the least studied community
+
+"Not applicable", "Undisclosed", "Other" and "Not recorded" are left out of these rankings. It updates
+with every filter and hides when nothing matches. It is a plain list, not a live region, so it never
+talks over the result-count announcement.
+
+3 new checks compare it with counts computed independently from the data, with and without a filter.

@@ -3981,3 +3981,33 @@ ul li {
 .filter-content-wrapper {
     padding: 8px 16px
 }
+
+/* "At a glance" summary (#27) */
+.insights {
+    margin: 12px 16px 0;
+    padding: 10px 14px;
+    border-left: 4px solid var(--ds-accent-primary);
+    background: var(--ds-bg-app);
+    border-radius: 6px;
+    text-align: left
+}
+
+.insights-title {
+    font-size: .9rem !important;
+    margin: 0 0 4px !important;
+    color: var(--ds-text-primary)
+}
+
+.insights-list {
+    margin: 0;
+    padding-left: 1.1rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 28px;
+    font-size: .85rem;
+    color: var(--ds-text-primary)
+}
+
+.insights-list li {
+    margin: 0
+}

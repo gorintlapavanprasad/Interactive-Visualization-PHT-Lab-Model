@@ -92,6 +92,7 @@ function initChartControls() {
 
 function Drawplot(PlotFilter) {
     if (!PlotFilter) return;
+    renderInsights();
     const plotEl = document.querySelector("#plotIt");
     const errorEl = document.querySelector(".plot-error");
     errorEl.innerHTML = "";
@@ -450,3 +451,47 @@ function getPlot(providedValue) {
     if (finalVal) Drawplot(finalVal)
 }
 
+
+// ---- "At a glance" (#27): a short, plain-language summary of the filtered studies.
+// Plain text in a list (read well by screen readers); not a live region, so it
+// never talks over the "N of 216 studies match" announcement.
+const INSIGHT_SKIP = v => ['not applicable', 'undisclosed/unknown', 'undisclosed', 'other', canon(NOT_RECORDED)].includes(canon(v));
+
+function topAnswers(rows, col) {
+    const counts = new Map();
+    rows.forEach(r => new Set(splitValues(r[col]).map(displayLabel)).forEach(v => { if (!INSIGHT_SKIP(v)) counts.set(v, (counts.get(v) || 0) + 1) }));
+    return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+}
+
+function insightsItems(rows) {
+    if (!rows.length) return [];
+    const n = rows.length, plural = k => k === 1 ? 'study' : 'studies';
+    const years = rows.map(r => +r.Year).filter(Boolean);
+    const out = [];
+    if (years.length) {
+        const byYear = topAnswers(rows.filter(r => +r.Year), 'Year');
+        out.push(`${n} ${plural(n)}, from ${Math.min(...years)} to ${Math.max(...years)}. Busiest year: ${byYear[0][0]} (${byYear[0][1]} ${plural(byYear[0][1])}).`)
+    } else out.push(`${n} ${plural(n)}.`);
+    [['Community of focus', 'Most studied community'], ['Study Method', 'Most used method'], ['Technology Modality', 'Most used technology']].forEach(([col, label]) => {
+        const t = topAnswers(rows, col);
+        if (t.length) out.push(`${label}: ${shortAnswer(t[0][0])} (${t[0][1]} ${plural(t[0][1])}).`)
+    });
+    const comm = topAnswers(rows, 'Community of focus');
+    if (comm.length > 1) {
+        const least = comm[comm.length - 1];
+        out.push(`Least studied community: ${shortAnswer(least[0])} (${least[1]} ${plural(least[1])}).`)
+    }
+    return out
+}
+
+// "Blind or low vision (BLV)" stays; drop long "(e.g., ...)" examples.
+const shortAnswer = v => String(v).replace(/\s*\((?:i\.e\.|e\.g\.)[^)]*\)\s*$/i, '');
+
+function renderInsights() {
+    const list = document.getElementById('insightsList');
+    if (!list) return;
+    const items = insightsItems(filteredDataTmp);
+    list.innerHTML = items.map(t => `<li>${escapeHtml(t)}</li>`).join('');
+    const box = list.closest('.insights');
+    if (box) box.hidden = !items.length
+}

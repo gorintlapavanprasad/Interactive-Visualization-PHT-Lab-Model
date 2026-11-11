@@ -900,6 +900,7 @@ async function collectGolden(page) {
       check('320 px wide (400% zoom): no sideways page scrolling on any tab', reflow.length === 0, reflow.join(', '));
       // 200% zoom on a small laptop: every sidebar text field can be reached
       await p.close(); p = await openAt(640, 400);
+      await p.evaluate(() => { document.getElementById('moreFields').open = true }); // as a user opening "More search fields"
       const fields = await p.evaluate(() => ['globalSearch', 'titleFilter', 'authorFilter', 'YearFilter', 'PagesFilter', 'NotesFilter']
         .filter(id => { const e = document.getElementById(id); if (!e) return true; e.scrollIntoView({ block: 'center' }); const r = e.getBoundingClientRect(); return !(r.width > 0 && r.top >= 0 && r.bottom <= innerHeight) }));
       check('200% zoom: every sidebar text field can be scrolled into view', fields.length === 0, fields.join(', '));
@@ -1362,7 +1363,9 @@ async function collectGolden(page) {
       // 1. search for blind-player games
       let n = await tabTo(a => a.id === 'globalSearch'); steps.push(['search box', n]);
       await p.keyboard.type('blind', { delay: 20 });
-      // 2. year range 2016-2023
+      // 2. year range 2016-2023 (open "More search fields" with Enter first)
+      n = await tabTo(a => /^More search fields/.test(a.text)); steps.push(['more fields', n]);
+      await p.keyboard.press('Enter'); await sleep(150);
       n = await tabTo(a => a.id === 'YearFilter'); steps.push(['year box', n]);
       await p.keyboard.type('2016-2023', { delay: 20 }); await p.keyboard.press('Enter'); await sleep(1200);
       const res = await p.evaluate(() => ({ n: filteredDataTmp.length, allYears: filteredDataTmp.every(r => +r.Year >= 2016 && +r.Year <= 2023), said: document.getElementById('sr-announcer').textContent, patterns: [...document.querySelectorAll('#plotIt .highcharts-point')].some(e => /^url\(/.test(e.getAttribute('fill') || '')) }));
@@ -1386,6 +1389,48 @@ async function collectGolden(page) {
       check('200% zoom + keyboard only: a study opens, then focus returns to it', dialog.open && dialog.focusIn && back, JSON.stringify({ ...dialog, back }));
       check('200% zoom + keyboard only: Copy link confirms, and the link keeps the search and years', /copied/i.test(shared.label) && /q=blind/.test(shared.hash) && /yr=2016-2023/.test(shared.hash), JSON.stringify(shared));
       check('200% zoom: patterns on (colour-blind setting kept) and no sideways scrolling', res.patterns && !layout.sideways, JSON.stringify({ patterns: res.patterns, ...layout }));
+      await p.close();
+    }
+
+    // ------------------------------------- sidebar: no hidden scroll box (#26) ----
+    console.log('\nsidebar: no hidden scroll box (#26)');
+    {
+      const rows = [];
+      for (const [w, h] of [[1280, 720], [1366, 768], [1440, 900], [1920, 1080]]) {
+        const p = await browser.newPage();
+        await p.setViewport({ width: w, height: h });
+        await p.evaluateOnNewDocument(() => localStorage.setItem('pht_lab_tour_seen', 'true'));
+        await p.goto(base, { waitUntil: 'networkidle0' });
+        await p.waitForFunction(() => window.plotState && plotState.chart);
+        rows.push(await p.evaluate(w => {
+          const box = document.querySelector('.filter-content-wrapper');
+          const sum = document.querySelector('#moreFields > summary').getBoundingClientRect();
+          return { w, scrolls: box.scrollHeight > box.clientHeight + 1, summaryVisible: sum.height > 0 && sum.bottom <= box.getBoundingClientRect().bottom + 1, closed: !document.getElementById('moreFields').open };
+        }, w));
+        await p.close();
+      }
+      check('1280–1920 px: the General Information box shows everything without its own scroll bar', rows.every(r => !r.scrolls && r.summaryVisible), JSON.stringify(rows.map(r => [r.w, r.scrolls ? 'scrolls' : 'ok'])));
+      const p = await browser.newPage();
+      await p.setViewport({ width: 1440, height: 900 });
+      await p.evaluateOnNewDocument(() => localStorage.setItem('pht_lab_tour_seen', 'true'));
+      await p.goto(base + '#yr=2015-2020&au=Smith', { waitUntil: 'networkidle0' });
+      await p.waitForFunction(() => window.plotState && plotState.chart); await sleep(400);
+      const r = await p.evaluate(async () => {
+        const wait = ms => new Promise(res => setTimeout(res, ms));
+        const box = document.getElementById('moreFields');
+        const out = { linkOpens: box.open, count: document.getElementById('moreFieldsCount').textContent };
+        document.querySelector('[data-action=reset]').click(); await wait(300);
+        out.countAfterReset = document.getElementById('moreFieldsCount').textContent;
+        box.open = false;
+        const sum = box.querySelector('summary'); sum.focus();
+        out.summaryFocusable = document.activeElement === sum;
+        out.hiddenWhenClosed = !document.getElementById('YearFilter').checkVisibility();
+        return out;
+      });
+      await p.keyboard.press('Enter'); await sleep(150);
+      const opened = await p.evaluate(() => document.getElementById('moreFields').open && document.getElementById('YearFilter').checkVisibility());
+      check('"More search fields" opens with the keyboard and hides nothing that is in use', r.summaryFocusable && r.hiddenWhenClosed && opened, JSON.stringify({ ...r, opened }));
+      check('a link with a year or author opens it and says how many are in use; Reset clears the count', r.linkOpens && /2 in use/.test(r.count) && r.countAfterReset === '', JSON.stringify(r));
       await p.close();
     }
 

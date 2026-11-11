@@ -102,6 +102,10 @@
     <div id="globalSearch-status" class="field-help search-status" aria-hidden="true"></div>
   </div>
 
+  <!-- Less-used fields fold away so the box never needs its own scroll bar (#26).
+       Opens by itself when any of them has a value (see syncMoreFields in filters.js). -->
+  <details id="moreFields" class="more-fields">
+    <summary>More search fields <span class="more-fields-list">(title, author, year, pages, notes)</span><span id="moreFieldsCount" class="more-fields-count"></span></summary>
   <div class="ui field question">
     <label for="titleFilter">Title</label>
     <div class="ui fluid input">
@@ -144,6 +148,7 @@
       <input type="text" id="NotesFilter" placeholder="Enter the text" />
     </div>
   </div>
+  </details>
   
 </form>
               </div>

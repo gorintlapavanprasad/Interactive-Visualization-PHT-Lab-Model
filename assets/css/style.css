@@ -3948,3 +3948,36 @@ ul li {
 .empty-state .ui.button {
     margin-top: 8px
 }
+
+/* "More search fields" disclosure (#26) */
+.more-fields {
+    margin: 4px 0 0
+}
+
+.more-fields>summary {
+    cursor: pointer;
+    min-height: 24px;
+    padding: 2px 0;
+    line-height: 1.3;
+    font-weight: 700;
+    font-size: .8rem;
+    color: var(--ds-text-primary);
+    list-style-position: outside
+}
+
+.more-fields>summary .more-fields-list {
+    font-weight: 400;
+    color: var(--ds-text-secondary)
+}
+
+.more-fields>summary .more-fields-count {
+    color: var(--ds-accent-primary)
+}
+
+.more-fields[open]>summary {
+    margin-bottom: 8px
+}
+
+.filter-content-wrapper {
+    padding: 8px 16px
+}

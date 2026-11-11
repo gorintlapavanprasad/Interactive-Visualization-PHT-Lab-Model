@@ -58,7 +58,20 @@ function validateAndApply() {
     }
 }
 
+// 'More search fields' (#26): open when any of its fields has a value, and say
+// how many are in use, so a filter is never hidden away.
+const MORE_FIELD_IDS = ['titleFilter', 'authorFilter', 'YearFilter', 'PagesFilter', 'NotesFilter'];
+function syncMoreFields() {
+    const box = document.getElementById('moreFields');
+    if (!box) return;
+    const used = MORE_FIELD_IDS.filter(id => (document.getElementById(id)?.value || '').trim()).length;
+    if (used) box.open = true;
+    const c = document.getElementById('moreFieldsCount');
+    if (c) c.textContent = used ? ` – ${used} in use` : ''
+}
+
 function applyFilters(args) {
+    syncMoreFields();
     if (args === "reset") {
         document.querySelector(".recordsStatus").innerHTML = `Studies `;
         TEXT_FILTER_IDS.forEach(id => {
@@ -68,6 +81,7 @@ function applyFilters(args) {
                 el.closest('.field')?.classList.remove('error')
             }
         });
+        syncMoreFields();
         // Clear every dropdown without triggering a render (and a focus jump into
         // the last dropdown) per removed tag; render exactly once afterwards.
         suppressApply = true;

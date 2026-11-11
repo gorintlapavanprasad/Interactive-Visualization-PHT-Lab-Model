@@ -203,7 +203,7 @@ infrastructure, **P3** = nice to have.
 | T8 | P1 | ✅ **Done** (section 17): Gaps tab, a heatmap of any two dimensions with gaps highlighted | — |
 | T9 | P2 | ✅ **Done** (section 12): no requests to other servers | Works with network off |
 | T10 | P2 | ✅ Automated part done (0 axe violations; reflow at 400% zoom; see section 8). Tour updated to cover the new features (section 22). Remaining: sessions with real screen-reader users | Signed off by disabled testers |
-| T11 | P2 | ✅ **Done** (section 13): GitHub Actions runs lint, the data audit, 102 unit tests and 165 browser checks on every push and pull request (sections 19–24) | CI green on every push |
+| T11 | P2 | ✅ **Done** (section 13): GitHub Actions runs lint, the data audit, 102 unit tests and 168 browser checks on every push and pull request (sections 19–24) | CI green on every push |
 | T12 | P2 | ✅ **Done** (section 18): 10 focused script files, ESLint in CI, jQuery 3.7.1, grids from config | — |
 | T13 | P2 | ✅ Mostly done (section 14): unused files and dead code removed, README added. Remaining (owner's decisions): choose a project LICENSE, confirm the Highcharts licence, archive the old DataSpectra repo | — |
 | T14 | P2 | ✅ **Done.** Live on GitHub Pages | Public URL |
@@ -984,3 +984,19 @@ There is no flashing content. The only keyframe animation is a one-off 0.2 s fad
 - **Throughout:** no sideways scrolling, and the patterns stay on.
 
 Everything passed using the fixes from #17–#24. Nothing new was needed.
+
+### #26: Sidebar's hidden scroll box
+
+**Problem:** the "General Information" box scrolled inside the sidebar. At 1366 x 768 it showed only
+"Search all fields" and "Title"; Lead Author, Year, Pages and Notes were hidden below with no visible
+sign. The whole sidebar couldn't simply scroll instead, because the filter menus open to its right and
+would be clipped.
+
+**Fix:** the five less-used fields now sit under **"More search fields (title, author, year, pages,
+notes)"**, a native `<details>` that works with the keyboard and is announced by screen readers.
+- It opens by itself whenever any of those fields has a value (typed, from a share link, or imported),
+  and says how many are in use ("– 2 in use"). A filter is never hidden.
+- Reset clears the count.
+- The box no longer needs its own scroll bar at 1280 x 720 or larger.
+
+3 new checks.
